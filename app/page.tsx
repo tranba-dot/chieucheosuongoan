@@ -1,47 +1,64 @@
-export default function Page() {
-  return (
-    <main
-      style={{
-        colorScheme: 'light dark',
-        position: 'relative',
-        display: 'flex',
-        minHeight: '100vh',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'light-dark(#fff, #000)',
-        color: 'light-dark(#000, #fff)',
-      }}
-    >
-      <svg
-        aria-hidden="true"
-        style={{ width: 80, height: 80 }}
-        width={80}
-        height={80}
-        fill="none"
-        viewBox="0 0 20 20"
-        xmlns="http://www.w3.org/2000/svg"
-        stroke="currentColor"
-        strokeWidth="0.5"
-      >
-        <path
-          d="M14.2 14.2H17V6.9375C17 4.76288 15.2371 3 13.0625 3H5.8V5.8M14.2 14.2V7.79063L7.79062 14.2H14.2ZM14.2 14.2V17H6.9375C4.76288 17 3 15.2371 3 13.0625V5.8H5.8M5.8 5.8V12.2313L12.2313 5.8H5.8Z"
-          strokeLinejoin="round"
-        />
-      </svg>
-      <p
-        style={{
-          position: 'absolute',
-          left: '50%',
-          top: 'calc(50% + 56px)',
-          transform: 'translateX(-50%)',
-          whiteSpace: 'nowrap',
-          fontSize: '14px',
-          fontWeight: 500,
-          color: 'light-dark(#71717a, #a1a1aa)',
-        }}
-      >
-        Your v0 generation will show here.
-      </p>
-    </main>
-  )
+'use client'
+
+import { useMemo, useState } from 'react'
+import { ArrowRight, BookOpen, Check, ChevronRight, CircleHelp, Compass, Eye, LockKeyhole, Menu, Search, Sparkles, X } from 'lucide-react'
+
+const arts = [
+  { id: 'cheo', name: 'Chèo', sub: 'Sân khấu dân gian miền Bắc', desc: 'Tiếng cười, lời ca và những thân phận được kể bằng lối diễn ước lệ.', image: '/images/cheo-theatre.png', tone: 'burgundy' },
+  { id: 'tuong', name: 'Tuồng', sub: 'Sân khấu cung đình & dân gian', desc: 'Nghệ thuật sân khấu giàu tính ước lệ, với hóa trang và động tác biểu trưng.', tone: 'indigo' },
+  { id: 'quan-ho', name: 'Quan họ', sub: 'Dân ca Kinh Bắc', desc: 'Lời ca đối đáp giao duyên, vang lên giữa những làng quê ven sông Cầu.', tone: 'green' },
+  { id: 'roi-nuoc', name: 'Múa rối nước', sub: 'Nghệ thuật mặt nước', desc: 'Những con rối kể chuyện đời sống bằng chuyển động trên sân khấu ao làng.', tone: 'gold' },
+  { id: 'cai-luong', name: 'Cải lương', sub: 'Sân khấu Nam Bộ', desc: 'Sự giao thoa giữa ca hát, diễn xuất và những câu chuyện đời gần gũi.', tone: 'burgundy' },
+  { id: 'ca-tru', name: 'Ca trù', sub: 'Âm nhạc thính phòng', desc: 'Tiếng phách, tiếng đàn đáy và giọng hát tinh tế trong không gian cổ truyền.', tone: 'indigo' },
+]
+const chapters = [
+  { n: 1, roman: 'I', title: 'Làng quê khởi sự', desc: 'Bước vào không gian làng quê và những luật lệ đầu tiên.', state: 'current' },
+  { n: 2, roman: 'II', title: 'Rời làng vướng oan', desc: 'Một chuyến đi mở ra những hiểu lầm.', state: 'locked' },
+  { n: 3, roman: 'III', title: 'Mầu lên chùa', desc: 'Gặp gỡ Mầu và câu chuyện phía sau lớp mặt nạ.', state: 'locked' },
+  { n: 4, roman: 'IV', title: 'Oan thai nuôi trẻ', desc: 'Nhìn lại một phận người bằng nhiều góc nhìn.', state: 'locked' },
+  { n: 5, roman: 'V', title: 'Giác ngộ', desc: 'Khi sự thật được soi sáng.', state: 'locked' },
+]
+
+function Header({ page, setPage, openSearch }: { page: string; setPage: (p: string) => void; openSearch: () => void }) {
+  const [menu, setMenu] = useState(false)
+  const links = [['heritage', 'Khám phá di sản'], ['game', 'Chiếu Chèo Sương Oan'], ['ai-game', 'AI Vén Màn'], ['ai-heritage', 'AI Hỏi Đáp']]
+  return <>
+    <header className="site-header"><button className="brand" onClick={() => setPage('home')} aria-label="Về trang chủ"><span className="brand-mark">✦</span><span><b>CHIẾU CHÈO</b><small>SƯƠNG OAN</small></span></button><nav className="desktop-nav">{links.map(([id, label]) => <button key={id} className={page === id ? 'active' : ''} onClick={() => setPage(id)}>{label}</button>)}</nav><div className="header-actions"><button className="icon-button" onClick={openSearch} aria-label="Tìm kiếm"><Search /></button><button className="menu-button" onClick={() => setMenu(!menu)} aria-label="Mở menu">{menu ? <X /> : <Menu />}</button></div></header>
+    {menu && <div className="mobile-menu">{links.map(([id, label]) => <button key={id} onClick={() => { setPage(id); setMenu(false) }}>{label}<ChevronRight /></button>)}<button onClick={() => { setPage('journey'); setMenu(false) }}>Hành trình của tôi<ChevronRight /></button></div>}
+  </>
 }
+
+function SectionKicker({ children }: { children: React.ReactNode }) { return <div className="section-kicker"><span />{children}</div> }
+function Button({ children, onClick, secondary = false }: { children: React.ReactNode; onClick?: () => void; secondary?: boolean }) { return <button className={`primary-button ${secondary ? 'secondary-button' : ''}`} onClick={onClick}>{children}<ArrowRight /></button> }
+
+function Home({ setPage }: { setPage: (p: string) => void }) { return <main>
+  <section className="hero"><div className="hero-copy"><SectionKicker>DI SẢN · TRÒ CHƠI · KHÁM PHÁ</SectionKicker><h1>CHIẾU CHÈO<br /><em>SƯƠNG OAN</em></h1><p className="hero-tagline">Giải oan trong một câu chuyện.<br />Khám phá trong một di sản.</p><p className="hero-body">Một không gian số đồng hành cùng bộ board game vật lý — nơi mỗi câu hỏi mở ra một lớp văn hóa Việt.</p><div className="button-row"><Button onClick={() => setPage('heritage')}>Khám phá di sản</Button><Button secondary onClick={() => setPage('game')}>Chơi cùng bộ game</Button></div></div><div className="hero-art"><div className="hero-image-wrap"><img src="/images/cheo-theatre.png" alt="Sân khấu Chèo truyền thống Việt Nam" /></div><div className="hero-caption"><span>01 / 03</span><span>Không gian Chèo</span></div></div></section>
+  <section className="entry-section page-width"><SectionKicker>HÀNH TRÌNH CỦA BẠN</SectionKicker><div className="entry-grid"><Entry n="01" title="Khám phá di sản" text="Đi qua những câu chuyện, âm thanh và sân khấu của nghệ thuật truyền thống Việt Nam." icon={<Compass />} onClick={() => setPage('heritage')} /><Entry n="02" title="Chiếu Chèo Sương Oan" text="Kết nối bộ game vật lý và bước vào hành trình giải oan qua từng chương." icon={<BookOpen />} onClick={() => setPage('game')} /><Entry n="03" title="AI Vén Màn" text="Đặt câu hỏi, chọn bằng chứng và tự mình nhìn thấy điều ẩn sau câu chuyện." icon={<Eye />} onClick={() => setPage('ai-game')} /></div></section>
+  <section className="curated-section"><div className="page-width"><div className="section-heading"><div><SectionKicker>TỦ TRƯNG BÀY</SectionKicker><h2>Nghệ thuật truyền thống<br /><em>Việt Nam</em></h2></div><button className="text-link" onClick={() => setPage('heritage')}>Xem toàn bộ bộ sưu tập <ArrowRight /></button></div><div className="art-grid">{arts.slice(0, 4).map((a, i) => <ArtCard key={a.id} art={a} featured={i === 0} onClick={() => setPage('article')} />)}</div></div></section>
+  <section className="quote-section"><div className="quote-mark">“</div><blockquote>Di sản không nằm yên trong quá khứ.<br /><strong>Di sản tiếp tục sống</strong> trong cách chúng ta<br />lắng nghe và kể lại.</blockquote><span className="quote-source">— Tinh thần của Chiếu Chèo Sương Oan</span></section>
+</main> }
+function Entry({ n, title, text, icon, onClick }: { n: string; title: string; text: string; icon: React.ReactNode; onClick: () => void }) { return <button className="entry-card" onClick={onClick}><div className="entry-top"><span>{n}</span><span className="entry-icon">{icon}</span></div><h3>{title}</h3><p>{text}</p><span className="circle-arrow"><ArrowRight /></span></button> }
+function ArtCard({ art, featured, onClick }: { art: any; featured?: boolean; onClick: () => void }) { return <button className={`art-card ${featured ? 'featured' : ''}`} onClick={onClick}><div className={`art-image art-${art.tone}`}>{art.image && <img src={art.image} alt="" />}</div><div className="art-info"><span>{art.sub}</span><h3>{art.name}</h3><p>{art.desc}</p><ChevronRight /></div></button> }
+
+function Heritage({ setPage }: { setPage: (p: string) => void }) { const [filter, setFilter] = useState('Tất cả'); const [query, setQuery] = useState(''); const visible = arts.filter(a => !query || a.name.toLowerCase().includes(query.toLowerCase())); return <main className="page-width inner-page"><div className="page-intro"><SectionKicker>KHÁM PHÁ DI SẢN</SectionKicker><h1>Một Việt Nam<br /><em>đa thanh sắc</em></h1><p>Khám phá những hình thức nghệ thuật đã dệt nên ký ức, tiếng nói và tâm hồn của nhiều vùng đất Việt Nam.</p></div><div className="search-line"><div className="inline-search"><Search /><input placeholder="Tìm kiếm nghệ thuật, vùng miền..." value={query} onChange={e => setQuery(e.target.value)} /></div><div className="filters">{['Tất cả', 'Sân khấu', 'Âm nhạc', 'Trình diễn'].map(f => <button className={filter === f ? 'selected' : ''} onClick={() => setFilter(f)} key={f}>{f}</button>)}</div></div><div className="heritage-grid">{visible.map(a => <ArtCard art={a} key={a.id} onClick={() => setPage('article')} />)}</div><div className="source-note"><span>✦</span><p>Nội dung được biên soạn theo hướng giáo dục, ưu tiên nguồn tham khảo đã kiểm chứng. Một số bài viết đang trong quá trình hoàn thiện.</p></div></main> }
+
+function Article({ setPage }: { setPage: (p: string) => void }) { return <main className="article-page"><div className="article-hero page-width"><div><SectionKicker>NGHỆ THUẬT SÂN KHẤU DÂN GIAN</SectionKicker><h1>Chèo</h1><p className="article-lead">Một hình thức sân khấu dân gian giàu tính trữ tình và trào lộng, nơi tiếng cười soi chiếu những phận người.</p></div><img src="/images/cheo-theatre.png" alt="Biểu diễn Chèo trên sân khấu" /></div><div className="article-body page-width"><aside><span>NỘI DUNG</span>{['Tổng quan', 'Nguồn gốc', 'Đặc trưng', 'Âm nhạc', 'Không gian biểu diễn', 'Giá trị văn hóa'].map((x, i) => <button className={i === 0 ? 'current' : ''} key={x}>{x}<ChevronRight /></button>)}</aside><article><SectionKicker>TỔNG QUAN</SectionKicker><h2>Khi sân khấu trở thành<br /><em>tấm gương của làng quê</em></h2><p>Chèo là một loại hình sân khấu dân gian của Việt Nam, phát triển mạnh ở vùng đồng bằng Bắc Bộ. Trong Chèo, câu chuyện được kể bằng sự kết hợp giữa lời ca, tiếng nhạc, động tác hình thể và lối diễn ước lệ.</p><p>Nhân vật Chèo thường bước ra từ đời sống quen thuộc — người nông dân, cô gái, ông quan, bà mẹ. Họ mang theo những niềm vui, nỗi oan và khát vọng rất con người.</p><div className="highlight-quote"><span>TRONG CHÈO</span><strong>“Ước lệ” không phải là xa rời thực tế — đó là cách sân khấu gợi mở để người xem tự hoàn thiện câu chuyện.</strong></div><SectionKicker>NGUỒN THAM KHẢO</SectionKicker><div className="citation"><span>01</span><div><strong>Âm nhạc Chèo</strong><p>Viện Âm nhạc Việt Nam · Tư liệu tham khảo giáo dục</p></div><ChevronRight /></div><button className="back-link" onClick={() => setPage('heritage')}>← Quay lại bộ sưu tập</button></article></div></main> }
+
+function Game({ setPage }: { setPage: (p: string) => void }) { return <main className="page-width inner-page game-page"><div className="game-intro"><div><SectionKicker>ĐỒNG HÀNH CÙNG BỘ GAME VẬT LÝ</SectionKicker><h1>Hành trình<br /><em>giải oan</em></h1><p>Đặt bộ game trước mặt. Mỗi chương là một lớp màn, mỗi góc nhìn là một chìa khóa.</p></div><div className="score-panel"><div><span>ĐIỂM OAN</span><strong>03</strong></div><div><span>HIỂU CHÈO</span><strong>01</strong></div><button onClick={() => setPage('journey')}>Hành trình của tôi <ArrowRight /></button></div></div><div className="progress-path">{chapters.map((c, i) => <div className={`chapter-node ${c.state}`} key={c.n}><div className="node-circle">{c.state === 'locked' ? <LockKeyhole /> : c.roman}</div>{i < 4 && <div className="path-line" />}<span>CHƯƠNG {c.roman}</span><strong>{c.title}</strong></div>)}</div><div className="game-actions"><div className="game-card featured-game"><div><SectionKicker>ĐANG MỞ KHÓA</SectionKicker><h2>Chương I<br /><em>Làng quê khởi sự</em></h2><p>Hãy quét mã QR trên một Thẻ Oan để bắt đầu một tình huống.</p><Button onClick={() => setPage('oan')}>Mở chương I</Button></div><div className="chapter-stamp">I</div></div><div className="game-card"><span className="card-icon"><Eye /></span><h3>AI Vén Màn</h3><p>Đặt câu hỏi về chương đang chơi và chọn bằng chứng giúp bạn hiểu sâu hơn.</p><Button secondary onClick={() => setPage('ai-game')}>Vén màn</Button></div></div></main> }
+
+function Oan({ setPage }: { setPage: (p: string) => void }) { const [code, setCode] = useState(''); const [result, setResult] = useState<'success' | 'error' | null>(null); const submit = () => setResult(code === '2714' ? 'success' : 'error'); return <main className="page-width oan-page"><button className="back-link" onClick={() => setPage('game')}>← Về game hub</button><div className="oan-layout"><div className="oan-card-visual"><span>THẺ OAN · OAN-01</span><div className="oan-glyph">?</div><strong>Người trong<br />bóng nước</strong><small>CHƯƠNG I · LÀNG QUÊ KHỞI SỰ</small></div><div className="oan-content"><SectionKicker>CHƯƠNG I · THẺ OAN OAN-01</SectionKicker><h1>Người trong<br /><em>bóng nước</em></h1><p className="situation">Trong buổi diễn hội làng, một lời buộc tội được truyền đi quá nhanh. Nhân vật bị nhìn thấy ở một nơi, nhưng câu chuyện phía sau có thể không giống điều mọi người nghĩ.</p><div className="context-box"><span>GỢI Ý BỐI CẢNH</span><p>Hãy đọc kỹ tình huống trên Thẻ Oan vật lý. Góc nhìn của nhân vật sẽ giúp bạn nhận ra điều đang bị che khuất.</p></div><label htmlFor="code">MÃ GÓC NHÌN</label><div className="code-row"><input id="code" inputMode="numeric" maxLength={4} placeholder="Nhập 4 chữ số" value={code} onChange={e => { setCode(e.target.value.replace(/\D/g, '')); setResult(null) }} /><button onClick={submit}>Kiểm tra <ArrowRight /></button></div>{result && <div className={`result ${result}`}><span>{result === 'success' ? <Check /> : <X />}</span><div><strong>{result === 'success' ? 'GIẢI OAN THÀNH CÔNG' : 'GÓC NHÌN CHƯA PHÙ HỢP'}</strong><p>{result === 'success' ? 'Góc nhìn phù hợp. Oan không bị trừ.' : 'Thử xem lại tình huống và góc nhìn của nhân vật.'}</p></div></div>}<p className="privacy-note">Mã chỉ có hiệu lực trong đúng chương và đúng Thẻ Oan này.</p></div></div></main> }
+
+function AiHeritage() { const [question, setQuestion] = useState(''); const [asked, setAsked] = useState<string[]>([]); const ask = () => { if (question.trim()) { setAsked([...asked, question]); setQuestion('') } }; return <main className="page-width ai-page"><div className="ai-header"><div><SectionKicker>TRỢ LÝ TRI THỨC DI SẢN</SectionKicker><h1>AI Hỏi đáp<br /><em>Di sản</em></h1><p>Hỏi bất cứ điều gì về nghệ thuật truyền thống Việt Nam.</p></div><div className="ai-seal"><Sparkles /><span>ĐƯỢC KIỂM CHỨNG<br />BỞI KHO TRI THỨC</span></div></div><div className="chat-shell"><div className="chat-history"><div className="ai-message"><span className="ai-avatar">✦</span><div><p>Xin chào. Tôi có thể giúp bạn tìm hiểu về các loại hình nghệ thuật truyền thống Việt Nam. Hãy bắt đầu bằng một câu hỏi nhé.</p><small>AI HỎI ĐÁP DI SẢN · KHO TRI THỨC ĐÃ KIỂM CHỨNG</small></div></div>{asked.map((q, i) => <div key={i}><div className="user-message"><span>BẠN</span><p>{q}</p></div><div className="ai-message"><span className="ai-avatar">✦</span><div><p>{q.toLowerCase().includes('tuồng') ? 'Chèo và Tuồng đều sử dụng lối diễn ước lệ, nhưng có sắc thái khác nhau. Chèo thường gần gũi với đời sống làng quê, giàu tính trào lộng; trong khi Tuồng có tính nghi lễ, sử thi và quy tắc hóa trang chặt chẽ hơn.' : 'Đây là một câu hỏi thú vị. Theo các tư liệu trong kho tri thức, câu trả lời cần được nhìn từ nhiều khía cạnh: không gian biểu diễn, âm nhạc và cách nghệ sĩ sử dụng ngôn ngữ hình thể.'}<br /><br /><span className="source-tag">Nguồn: Tư liệu giáo dục nghệ thuật truyền thống · Độ tin cậy cao</span></p></div></div></div>)}</div><div className="suggestions"><span>CÓ THỂ BẠN MUỐN HỎI</span>{['Chèo khác Tuồng như thế nào?', 'Vai Mẫu trong Chèo là gì?', 'Vì sao Chèo dùng động tác ước lệ?'].map(q => <button key={q} onClick={() => setQuestion(q)}>{q}<ArrowRight /></button>)}</div><div className="chat-input"><input value={question} onChange={e => setQuestion(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') ask() }} placeholder="Đặt câu hỏi về di sản..." /><button onClick={ask} aria-label="Gửi câu hỏi"><ArrowRight /></button></div></div></main> }
+
+function AiGame() { const [step, setStep] = useState(1); const [selected, setSelected] = useState<string[]>([]); const evidence = [{ id: 'a', title: 'Lời truyền miệng trong làng', text: 'Tin đồn đi qua nhiều người trước khi đến tai nhân vật.', type: 'important' }, { id: 'b', title: 'Màu áo trong buổi diễn', text: 'Một chi tiết thị giác dễ khiến người xem nhớ đến.', type: 'weak' }, { id: 'c', title: 'Khoảng thời gian vắng mặt', text: 'Nhân vật rời khỏi sân khấu trước khi sự việc xảy ra.', type: 'important' }, { id: 'd', title: 'Tiếng trống hội làng', text: 'Âm thanh quen thuộc mở đầu cho buổi diễn.', type: 'misleading' }]; const toggle = (id: string) => setSelected(selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id]); const evaluate = () => setStep(3); return <main className="page-width ai-game-page"><div className="ai-game-top"><div><SectionKicker>GAMEPLAY MECHANIC · CHƯƠNG I</SectionKicker><h1>AI <em>Vén Màn</em></h1><p>Không trả lời thay bạn. Giúp bạn nhìn thấy điều cần tìm.</p></div><div className="usage"><span>AI VÉN MÀN</span><strong>{step === 1 ? '1 / 1' : '0 / 1'} lượt</strong>{step > 1 && <small>LOCKED · ĐÃ SỬ DỤNG</small>}</div></div><div className="ven-man-steps"><span className={step >= 1 ? 'on' : ''}>01 ĐẶT CÂU HỎI</span><span className={step >= 2 ? 'on' : ''}>02 CHỌN BẰNG CHỨNG</span><span className={step >= 3 ? 'on' : ''}>03 HIỂU CÂU CHUYỆN</span></div>{step === 1 && <div className="question-stage"><div className="stage-mark">?</div><h2>Bạn đang thắc mắc điều gì<br /><em>về chương này?</em></h2><textarea placeholder="Ví dụ: Tại sao nhân vật này lại bị mọi người hiểu lầm?" id="game-question" /><button className="primary-button" onClick={() => setStep(2)}>Tìm bằng chứng <ArrowRight /></button></div>}{step === 2 && <div className="evidence-stage"><div className="stage-copy"><SectionKicker>CHƯƠNG I · LỜI ĐỒN</SectionKicker><h2>Chọn những bằng chứng<br /><em>giúp bạn giải oan</em></h2><p>Không phải mọi chi tiết đều quan trọng như nhau. Hãy chọn những mảnh ghép giúp trả lời câu hỏi của bạn.</p></div><div className="evidence-grid">{evidence.map(e => <button className={`evidence-option ${selected.includes(e.id) ? 'chosen' : ''}`} onClick={() => toggle(e.id)} key={e.id}><span className="evidence-check">{selected.includes(e.id) ? <Check /> : ''}</span><strong>{e.title}</strong><p>{e.text}</p></button>)}</div><button className="primary-button evaluate-button" disabled={!selected.length} onClick={evaluate}>Vén màn <Eye /></button></div>}{step === 3 && <div className="answer-stage"><div className="success-seal"><Check /></div><SectionKicker>KẾT QUẢ ĐIỀU TRA</SectionKicker><h2>Vén màn <em>thành công</em></h2><p>Bạn đã tìm đúng những bằng chứng quan trọng. Nhân vật bị hiểu lầm vì lời đồn đã đi qua nhiều người, trong khi họ không có mặt tại thời điểm sự việc xảy ra.</p><div className="answer-source"><span>NGUỒN ĐỐI CHIẾU</span><strong>Kho dữ liệu game · Chương I · Oan-01</strong></div><div className="point-award">+1 <span>HIỂU CHÈO</span></div></div>}</main> }
+
+function Journey() { return <main className="page-width inner-page journey-page"><SectionKicker>HÀNH TRÌNH CỦA TÔI</SectionKicker><h1>Những lớp màn<br /><em>đã đi qua</em></h1><div className="journey-stats"><div><span>ĐIỂM OAN</span><strong>03</strong></div><div><span>ĐIỂM HIỂU CHÈO</span><strong>01</strong></div><div><span>KHÁM PHÁ</span><strong>04</strong></div></div><div className="journey-list">{chapters.map((c, i) => <div className={`journey-row ${i === 0 ? 'done' : ''}`} key={c.n}><span className="journey-number">{c.state === 'locked' ? <LockKeyhole /> : <Check />}</span><div><small>CHƯƠNG {c.roman}</small><strong>{c.title}</strong></div><span className="journey-status">{i === 0 ? 'ĐÃ HOÀN THÀNH' : 'CHƯA MỞ KHÓA'}</span></div>)}</div><div className="discoveries"><SectionKicker>ĐIỀU TÔI ĐÃ KHÁM PHÁ</SectionKicker><div><span>✦</span><p><strong>Chèo</strong><br />Sân khấu dân gian miền Bắc</p><span>ĐÃ LƯU</span></div></div></main> }
+
+export default function Page() { const [page, setPage] = useState('home'); const [searchOpen, setSearchOpen] = useState(false); const current = useMemo(() => page, [page]); return <div className="app-shell"><Header page={current} setPage={setPage} openSearch={() => setSearchOpen(true)} />{page === 'home' && <Home setPage={setPage} />}{page === 'heritage' && <Heritage setPage={setPage} />}{page === 'article' && <Article setPage={setPage} />}{page === 'game' && <Game setPage={setPage} />}{page === 'oan' && <Oan setPage={setPage} />}{page === 'ai-heritage' && <AiHeritage />}{page === 'ai-game' && <AiGame />}{page === 'journey' && <Journey />}{searchOpen && <div className="search-overlay" role="dialog" aria-modal="true"><button onClick={() => setSearchOpen(false)} className="close-search"><X /></button><SectionKicker>TÌM KIẾM DI SẢN</SectionKicker><h2>Tìm điều bạn muốn<br /><em>khám phá</em></h2><div className="overlay-search"><Search /><input autoFocus placeholder="Nhập tên nghệ thuật hoặc chủ đề..." onKeyDown={e => { if (e.key === 'Enter') { setSearchOpen(false); setPage('heritage') } }} /></div><p>Gợi ý: Chèo · Quan họ · Múa rối nước · Trang phục</p></div>}<footer><span>✦ CHIẾU CHÈO SƯƠNG OAN</span><span>MỘT DỰ ÁN VĂN HÓA GIÁO DỤC · 2024</span></footer></div> }
+
+function AppPlaceholder() { return null }
+
+// Keep this route map intentionally frontend-only for the prototype; replace with backend data sources when available.
+void AppPlaceholder
+void arts
+void chapters
