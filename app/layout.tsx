@@ -1,6 +1,14 @@
 import { Analytics } from '@vercel/analytics/next'
+import { Be_Vietnam_Pro } from 'next/font/google'
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+
+const beVietnamPro = Be_Vietnam_Pro({
+  subsets: ['latin', 'vietnamese'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--font-be-vietnam-pro',
+})
 
 export const metadata: Metadata = {
   title: 'Chiếu Chèo Sương Oan | Di sản Việt Nam',
@@ -15,5 +23,5 @@ export const viewport: Viewport = {
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="vi" className="bg-background"><body className="antialiased">{children}{process.env.NODE_ENV === 'production' && <Analytics />}</body></html>
+  return <html lang="vi" className={`${beVietnamPro.variable} bg-background`}><body className="antialiased">{children}{process.env.NODE_ENV === 'production' && <Analytics />}</body></html>
 }
