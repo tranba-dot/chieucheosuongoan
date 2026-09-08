@@ -1,0 +1,1 @@
+export const aiExamples = [{ question: 'Vì sao Thị Kính bị nghi oan?', conclusion: '[DEMO MODE] Hãy đối chiếu lời kể, hoàn cảnh và điều nhân vật thực sự chứng kiến trước khi kết luận.', evidence: ['Trình tự sự việc cần được kiểm chứng.', 'Một lời kể đơn lẻ không đại diện cho toàn bộ câu chuyện.'], sources: ['Nguồn trò chơi mô phỏng — cần thay bằng tư liệu đã xác minh.'] }]
