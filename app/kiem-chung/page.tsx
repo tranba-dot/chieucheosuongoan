@@ -1,2 +1,10 @@
-import { redirect } from 'next/navigation'
-export default function VerificationRoute() { redirect('/?route=kiem-chung') }
+import type { Metadata } from 'next'
+import AppShell from '../_app-shell'
+
+export const metadata: Metadata = {
+  title: 'Kiểm chứng Oan | Chiếu Chèo Sương Oan',
+}
+
+export default function VerificationRoute() {
+  return <AppShell initialPage="oan" />
+}

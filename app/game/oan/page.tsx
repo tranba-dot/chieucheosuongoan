@@ -1,6 +1,10 @@
-import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
+import AppShell from '../../_app-shell'
 
-export default async function OanQrRoute({ searchParams }: { searchParams: Promise<{ oan?: string }> }) {
-  const params = await searchParams
-  redirect(`/?oan=${encodeURIComponent(params.oan ?? 'oan-01')}`)
+export const metadata: Metadata = {
+  title: 'Kiểm chứng Oan | Chiếu Chèo Sương Oan',
+}
+
+export default function OanQrRoute() {
+  return <AppShell initialPage="oan" />
 }
