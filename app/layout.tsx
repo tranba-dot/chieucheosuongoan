@@ -14,11 +14,12 @@ export const metadata: Metadata = {
   title: 'Chiếu Chèo Sương Oan | Di sản Việt Nam',
   description: 'Không gian số khám phá nghệ thuật truyền thống Việt Nam và đồng hành cùng board game Chiếu Chèo Sương Oan.',
   generator: 'v0.app',
+  icons: { icon: '/icon.svg', apple: '/apple-icon.png' },
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'light',
-  themeColor: '#f4eee3',
+  colorScheme: 'dark',
+  themeColor: '#100d1a',
   userScalable: true,
 }
 

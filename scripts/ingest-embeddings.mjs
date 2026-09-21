@@ -1,5 +1,5 @@
-// One-time/repeatable script: embeds every document in the two source
-// collections and writes the chunks + vectors into `document_chunks`.
+// One-time/repeatable script: embeds every document in the source
+// collections (SOURCE_COLLECTIONS below) into `document_chunks`.
 // Run after adding/editing source documents:
 //   node --env-file=.env.local scripts/ingest-embeddings.mjs
 // ponytail: re-embeds ALL documents on every run, not just new/changed ones
@@ -12,7 +12,9 @@ const DB_NAME = 'ChieuCheoSuongOan'
 const CHUNKS_COLLECTION = 'document_chunks'
 const SOURCE_COLLECTIONS = {
   heritage: 'Tai_lieu_nghe_thuat_truyen_thong_Viet_Nam',
-  game: 'Tai_lieu_board_game'
+  // sic: the Atlas collection really is named "TaI" (capital i) - rename it there and here together.
+  game: 'TaI_lieu_board_game',
+  rhythm: 'Tai_lieu_nhip_phach'
 }
 const EMBEDDING_MODEL = 'gemini-embedding-001'
 const OUTPUT_DIMENSIONALITY = 768
@@ -42,24 +44,33 @@ async function embedText(text, taskType) {
   const apiKey = process.env.GOOGLE_AI_API_KEY
   if (!apiKey) throw new Error('GOOGLE_AI_API_KEY is not set')
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:embedContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: `models/${EMBEDDING_MODEL}`,
-        content: { parts: [{ text }] },
-        taskType,
-        outputDimensionality: OUTPUT_DIMENSIONALITY
-      })
+  // ponytail: the free tier allows ~100 embed requests/min, so on 429 just wait
+  // and retry (fixed pause, no adaptive pacing).
+  for (let attempt = 1; ; attempt++) {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:embedContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: `models/${EMBEDDING_MODEL}`,
+          content: { parts: [{ text }] },
+          taskType,
+          outputDimensionality: OUTPUT_DIMENSIONALITY
+        })
+      }
+    )
+    if (response.status === 429 && attempt < 6) {
+      console.log('    rate limited, waiting 30s...')
+      await new Promise((resolve) => setTimeout(resolve, 30000))
+      continue
     }
-  )
-  if (!response.ok) {
-    throw new Error(`Gemini embedding failed: ${response.status} ${await response.text()}`)
+    if (!response.ok) {
+      throw new Error(`Gemini embedding failed: ${response.status} ${await response.text()}`)
+    }
+    const data = await response.json()
+    return data.embedding.values
   }
-  const data = await response.json()
-  return data.embedding.values
 }
 
 async function main() {

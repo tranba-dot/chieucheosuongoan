@@ -34,7 +34,9 @@ export const DB_NAME = 'ChieuCheoSuongOan'
 export const CHUNKS_COLLECTION = 'document_chunks'
 export const SOURCE_COLLECTIONS = {
   heritage: 'Tai_lieu_nghe_thuat_truyen_thong_Viet_Nam',
-  game: 'Tai_lieu_board_game'
+  // sic: the Atlas collection really is named "TaI" (capital i) - rename it there and here together.
+  game: 'TaI_lieu_board_game',
+  rhythm: 'Tai_lieu_nhip_phach'
 } as const
 
 export type Mode = keyof typeof SOURCE_COLLECTIONS
