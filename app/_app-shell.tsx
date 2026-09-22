@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Search, Menu, X, ArrowRight, BookOpen, Sparkles, ChevronRight, Check, LockKeyhole, Eye } from "lucide-react"
+import { Search, Menu, X, ArrowRight, BookOpen, Sparkles, ChevronRight, Check, LockKeyhole, Eye, TriangleAlert, Volume2, VolumeX } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import { CHAPTERS as chapters } from "@/lib/chapters"
 import { useGameSession, type GameSession } from "./_session"
+import { findRhythmCard, scoreRhythm, rhythmAwarded, type RhythmResult, type BeatLabel } from "@/lib/rhythm"
 
 type Page = "home" | "qa" | "game" | "story" | "oan" | "perspective" | "intervention" | "ven" | "rhythm" | "journey" | "about" | "guide"
 type Art = { id:string; name:string; region:string; category:string; period:string; summary:string; image:string; tags:string[]; concepts:string[]; instruments:string[]; works:string[]; source:string }
@@ -28,13 +29,13 @@ const perspectiveCards:Perspective[]=[{id:'p-01',code:'1842',name:'Bác Độ',r
 const perspectiveEvidence:PerspectiveEvidence[]=[{cardId:'p-01',oanId:'oan-01',text:'Bác Độ nhớ tiếng trống vang lần đầu trước khi mọi người chạy về phía giếng. Trình tự này không khớp với lời đồn.',effect:-1},{cardId:'p-02',oanId:'oan-01',text:'Cô Mận nghe một câu nói ngắt quãng, nhưng không nhìn thấy người nói. Thông tin gợi mở nhưng chưa đủ.',effect:0},{cardId:'p-03',oanId:'oan-01',text:'Anh Sửu thấy một dải vải ở sân, nhưng không biết nó thuộc về ai hay xuất hiện lúc nào.',effect:1}];
 const interventionCards:Intervention[]=[{id:'i-01',name:'Xin thêm một lời chứng',description:'Mở thêm một cơ hội xem Thẻ Góc Nhìn sau kết quả chưa đủ.',condition:'Sau kết quả chưa đủ hoặc chưa giúp làm rõ.',timing:'Ngay sau điều tra Góc Nhìn',effect:'Cho phép nhập thêm một mã Góc Nhìn trong cùng Oan.'},{id:'i-02',name:'Giữ nhịp câu chuyện',description:'Bảo toàn một cơ hội thử Nhịp–Phách sau lần thất bại đầu tiên.',condition:'Sau lần thử đầu tiên dưới 80%.',timing:'Ngay sau lần thử Nhịp–Phách',effect:'Bảo toàn cơ hội tiếp theo.'}];
 const pageToPath:Partial<Record<Page,string>>={home:'/',qa:'/hoi-dap',game:'/game',story:'/tich-truyen',oan:'/kiem-chung',perspective:'/goc-nhin',intervention:'/can-thiep',ven:'/ai-ven-man',rhythm:'/nhip-phach',guide:'/huong-dan',about:'/gioi-thieu',journey:'/hanh-trinh'};
-function AppShell({initialPage='home'}:{initialPage?:Page}){const router=useRouter();const {session,save,storageError}=useGameSession();const [page,setPage]=useState<Page>(initialPage),[menu,setMenu]=useState(false),[code,setCode]=useState(''),[perspective,setPerspective]=useState<Perspective|null>(null),[testimony,setTestimony]=useState<PerspectiveEvidence|null>(null),[intervention,setIntervention]=useState('');const go=(p:Page)=>{setPage(p);setMenu(false);window.scrollTo({top:0,behavior:'smooth'});const path=pageToPath[p];if(path)router.push(path)};const inspect=()=>{const card=perspectiveCards.find(x=>x.code===code);const ev=card&&perspectiveEvidence.find(x=>x.cardId===card.id&&x.oanId===session.oanId);if(!card||!ev){setPerspective(null);setTestimony(null);return}setPerspective(card);setTestimony(ev);if(!session.usedPerspectives.includes(card.id+session.oanId))save({...session,usedPerspectives:[...session.usedPerspectives,card.id+session.oanId],oan:session.oan+ev.effect})};useEffect(()=>{if(!menu)return;const esc=(e:KeyboardEvent)=>{if(e.key==='Escape')setMenu(false)};window.addEventListener('keydown',esc);return()=>window.removeEventListener('keydown',esc)},[menu]);const navItems:[Page,string][]=[['home','TRANG CHỦ'],['qa','AI HỎI ĐÁP'],['game','TRÒ CHƠI'],['about','VỀ DỰ ÁN']];return <><header className='topbar'><button className='brand' onClick={()=>go('home')}><span>CHIẾU CHÈO</span><b>SƯƠNG OAN</b></button><nav>{navItems.map(([p,l])=><button key={p} onClick={()=>go(p)}>{l}</button>)}</nav><button className='menu-button' aria-label={menu?'Đóng menu':'Mở menu'} aria-expanded={menu} aria-controls='mobile-menu' onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button><div id='mobile-menu' className='mobile-menu' hidden={!menu}>{navItems.map(([p,l])=><button key={p} onClick={()=>go(p)}>{l}</button>)}</div></header>{storageError&&<div className='storage-warning' role='status'>Không lưu được ván trên máy này. Ván sẽ mất khi tải lại trang.</div>}{page==='home'&&<Home go={go}/>} {page==='qa'&&<QA/>} {page==='game'&&<UpdatedGame go={go} session={session}/>} {page==='story'&&<UpdatedStory card={storyCards.find(x=>x.id===session.storyId)||storyCards[0]} go={go}/>} {page==='oan'&&<UpdatedOan go={go}/>} {page==='perspective'&&<UpdatedPerspective go={go} code={code} setCode={setCode} inspect={inspect} perspective={perspective} testimony={testimony}/>} {page==='intervention'&&<UpdatedIntervention session={session} save={save} go={go}/>} {page==='ven'&&<UpdatedVen session={session} save={save} go={go}/>} {page==='rhythm'&&<Rhythm go={go}/>} {page==='journey'&&<Journey go={go}/>} {page==='about'&&<About/>}{page==='guide'&&<Guide go={go}/>}<Footer go={go}/></>}
+function AppShell({initialPage='home'}:{initialPage?:Page}){const router=useRouter();const {session,save,storageError}=useGameSession();const [page,setPage]=useState<Page>(initialPage),[menu,setMenu]=useState(false),[code,setCode]=useState(''),[perspective,setPerspective]=useState<Perspective|null>(null),[testimony,setTestimony]=useState<PerspectiveEvidence|null>(null),[intervention,setIntervention]=useState('');const go=(p:Page)=>{setPage(p);setMenu(false);window.scrollTo({top:0,behavior:'smooth'});const path=pageToPath[p];if(path)router.push(path)};const inspect=()=>{const card=perspectiveCards.find(x=>x.code===code);const ev=card&&perspectiveEvidence.find(x=>x.cardId===card.id&&x.oanId===session.oanId);if(!card||!ev){setPerspective(null);setTestimony(null);return}setPerspective(card);setTestimony(ev);if(!session.usedPerspectives.includes(card.id+session.oanId))save({...session,usedPerspectives:[...session.usedPerspectives,card.id+session.oanId],oan:session.oan+ev.effect})};useEffect(()=>{if(!menu)return;const esc=(e:KeyboardEvent)=>{if(e.key==='Escape')setMenu(false)};window.addEventListener('keydown',esc);return()=>window.removeEventListener('keydown',esc)},[menu]);const navItems:[Page,string][]=[['home','TRANG CHỦ'],['qa','AI HỎI ĐÁP'],['game','TRÒ CHƠI'],['about','VỀ DỰ ÁN']];return <><header className='topbar'><button className='brand' onClick={()=>go('home')}><span>CHIẾU CHÈO</span><b>SƯƠNG OAN</b></button><nav>{navItems.map(([p,l])=><button key={p} onClick={()=>go(p)}>{l}</button>)}</nav><button className='menu-button' aria-label={menu?'Đóng menu':'Mở menu'} aria-expanded={menu} aria-controls='mobile-menu' onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button><div id='mobile-menu' className='mobile-menu' hidden={!menu}>{navItems.map(([p,l])=><button key={p} onClick={()=>go(p)}>{l}</button>)}</div></header>{storageError&&<div className='storage-warning' role='status'>Không lưu được ván trên máy này. Ván sẽ mất khi tải lại trang.</div>}{page==='home'&&<Home go={go}/>} {page==='qa'&&<QA/>} {page==='game'&&<UpdatedGame go={go} session={session}/>} {page==='story'&&<UpdatedStory card={storyCards.find(x=>x.id===session.storyId)||storyCards[0]} go={go}/>} {page==='oan'&&<UpdatedOan go={go}/>} {page==='perspective'&&<UpdatedPerspective go={go} code={code} setCode={setCode} inspect={inspect} perspective={perspective} testimony={testimony}/>} {page==='intervention'&&<UpdatedIntervention session={session} save={save} go={go}/>} {page==='ven'&&<UpdatedVen session={session} save={save} go={go}/>} {page==='rhythm'&&<Rhythm go={go} session={session} save={save}/>} {page==='journey'&&<Journey go={go}/>} {page==='about'&&<About/>}{page==='guide'&&<Guide go={go}/>}<Footer go={go}/></>}
 function Footer({go}:{go:(p:Page)=>void}){return <footer className='site-footer'><div className='footer-brand'>CHIẾU CHÈO SƯƠNG OAN</div><p className='footer-tagline'>Một không gian học tập về nghệ thuật truyền thống Việt Nam.</p><nav className='footer-links'><button onClick={()=>go('guide')}>Hướng dẫn</button><button onClick={()=>go('about')}>Về dự án</button><a href='/gioi-thieu#nguon-ghi-nhan'>Nguồn & ghi nhận</a></nav><div className='footer-disclaimers'><p>Nội dung do AI tạo có thể chưa chính xác; hãy đối chiếu nguồn.</p><p>Hình minh họa mang tính giáo dục, không phải tư liệu lưu trữ.</p><p>© [Nội dung cần bổ sung: đơn vị thực hiện / năm / giấy phép]</p></div></footer>}
 function UpdatedGame({go,session}:{go:(p:Page)=>void;session:GameSession}){return <main className='page game-page'><div className='eyebrow'>CHIẾU CHÈO SƯƠNG OAN <span>COMPANION CHO BỘ GAME VẬT LÝ</span></div><h1>Một câu chuyện<br/><em>nhiều góc nhìn.</em></h1><p className='lead'>Website không thay thế bàn chơi. Nó mở đúng thông tin cho từng thẻ và từng vai trò.</p><div className='game-stats'><div><b>{session.oan}</b><span>ĐIỂM OAN</span></div><div><b>{session.hieu}</b><span>HIỂU CHÈO</span></div><div><b>{session.usedPerspectives.length}</b><span>LỜI CHỨNG</span></div></div><div className='game-grid'><div className='game-panel'><span className='eyebrow'>NGƯỜI KỂ TÍCH</span><h2>Thẻ Tích Truyện</h2><p>Người Kể Tích đọc thẻ cho cả nhóm. Thẻ có dấu Oan sẽ mở tình huống điều tra.</p><button className='primary' onClick={()=>go('story')}>Mở thẻ hiện tại <ArrowRight/></button></div><div className='game-panel dark'><span className='eyebrow'>NGƯỜI SOI CHỨNG</span><h2>Góc Nhìn</h2><p>Chọn một nhân vật phụ làm nguồn thông tin. Lá bài chỉ cung cấp bằng chứng.</p><button className='outline-light' onClick={()=>go('oan')}>Mở tình huống Oan <Eye/></button></div></div><div className='card-system'><b>THẺ TRONG BỘ GAME</b><p>Thẻ Tích Truyện · Thẻ Góc Nhìn · Thẻ Can Thiệp · Thẻ Nhịp–Phách · Thẻ AI Vén Màn</p><button className='text-link' onClick={()=>go('intervention')}>Xem Thẻ Can Thiệp <ArrowRight/></button></div></main>}
 function UpdatedStory({card,go}:{card:StoryCard;go:(p:Page)=>void}){return <main className='page story-page'><div className='eyebrow'>THẺ TÍCH TRUYỆN · CHƯƠNG {card.chapter}<span>{card.type==='oan'?'● CÓ TÌNH HUỐNG OAN':'THẺ THƯỜNG'}</span></div><div className={card.type==='oan'?'story-card oan-mark':'story-card'}><span className='story-symbol'>{card.type==='oan'?'O':'T'}</span><h1>{card.title}</h1><p>{card.content}</p>{card.type==='oan'&&<div className='oan-notice'><b>OAN</b><span>Thẻ này mở hệ thống điều tra Góc Nhìn.</span></div>}</div><button className='primary' onClick={()=>card.type==='oan'?go('oan'):go('game')}>{card.type==='oan'?'Mở tình huống Oan':'Tiếp tục câu chuyện'} <ArrowRight/></button><button className='text-link' onClick={()=>go('ven')}>Thẻ AI Vén Màn <Sparkles/></button></main>}
 function UpdatedOan({go}:{go:(p:Page)=>void}){return <main className='page oan-page'><button className='back' onClick={()=>go('story')}>← Về Thẻ Tích Truyện</button><div className='oan-card'><div className='eyebrow'>TÌNH HUỐNG OAN · OAN-01</div><h1>Lời truyền<br/><em>ngoài sân.</em></h1><p className='story'>Một lời truyền miệng khiến nhân vật bị nhìn bằng ánh mắt khác. Hãy đọc tình huống trước khi chọn một Thẻ Góc Nhìn.</p><p className='question'>Bạn muốn nhìn sự việc từ góc nhìn của ai?</p><button className='primary' onClick={()=>go('perspective')}>Chọn Thẻ Góc Nhìn <Eye/></button><button className='outline' onClick={()=>go('intervention')}>Xem Thẻ Can Thiệp</button></div></main>}
 function UpdatedPerspective({go,code,setCode,inspect,perspective,testimony}:{go:(p:Page)=>void;code:string;setCode:(x:string)=>void;inspect:()=>void;perspective:Perspective|null;testimony:PerspectiveEvidence|null}){const [tried,setTried]=useState(false);return <main className='page perspective-page'><button className='back' onClick={()=>go('oan')}>← Về tình huống Oan</button><div className='eyebrow'>NGƯỜI SOI CHỨNG · THẺ GÓC NHÌN</div><h1>Mở một<br/><em>góc nhìn.</em></h1><div className='code-box'><label htmlFor='perspective-code'>NHẬP MÃ 4 CHỮ SỐ</label><input id='perspective-code' inputMode='numeric' maxLength={4} value={code} onChange={e=>{setTried(false);setCode(e.target.value.replace(/\D/g,''))}} placeholder='— — — —'/><button className='primary' onClick={()=>{setTried(true);inspect()}}>Xem góc nhìn <ArrowRight/></button>{code&&!(perspective&&testimony)&&(tried||(code.length===4&&!perspectiveCards.some(x=>x.code===code)))&&<p className='error'><X/> Mã không hợp lệ hoặc chưa thuộc tình huống này.</p>}</div>{perspective&&testimony&&<div className='testimony'><div className='eyebrow'>{perspective.name} · {perspective.role}</div><div className='traits'>{perspective.traits.map(x=><span key={x}>{x}</span>)}</div><h2>Lời chứng / Thông tin được biết</h2><p>{testimony.text}</p><small>Giới hạn hiểu biết: {perspective.blindSpot}</small><div className={testimony.effect<0?'result ok':'result neutral'}><b>{testimony.effect<0?'Thông tin này giúp làm rõ một phần sự việc.':testimony.effect===0?'Thông tin này chưa đủ để xác định sự việc.':'Thông tin này chưa giúp làm rõ tình huống.'}</b></div></div>}</main>}
-function UpdatedIntervention({session,save,go}:{session:GameSession;save:(s:GameSession)=>void;go:(p:Page)=>void}){return <main className='page intervention-page'><button className='back' onClick={()=>go('game')}>← Về game hub</button><div className='eyebrow'>THẺ CAN THIỆP <span>NGUỒN LỰC CHIẾN THUẬT</span></div><h1>Nhóm vẫn có<br/><em>quyền lựa chọn.</em></h1><div className='intervention-grid'>{interventionCards.map(c=>{const used=session.usedInterventions.includes(c.id);return <article className={used?'used':''} key={c.id}><div className='card-top'><b>{c.name}</b><span>{used?'ĐÃ DÙNG':'1 LƯỢT'}</span></div><p>{c.description}</p><small><b>Điều kiện:</b> {c.condition}</small><small><b>Thời điểm:</b> {c.timing}</small><small><b>Hiệu ứng:</b> {c.effect}</small><button className='primary' disabled={used} onClick={()=>save({...session,usedInterventions:[...session.usedInterventions,c.id]})}>{used?'Đã tiêu thụ':'Dùng thẻ'}</button></article>})}</div></main>}
+function UpdatedIntervention({session,save,go}:{session:GameSession;save:(s:GameSession)=>void;go:(p:Page)=>void}){const rhythmCard=findRhythmCard('2714');const rhythmEligible=session.rhythmAttempts>=1&&session.rhythmBest<(rhythmCard?.passAt??80);return <main className='page intervention-page'><button className='back' onClick={()=>go('game')}>← Về game hub</button><div className='eyebrow'>THẺ CAN THIỆP <span>NGUỒN LỰC CHIẾN THUẬT</span></div><h1>Nhóm vẫn có<br/><em>quyền lựa chọn.</em></h1><div className='intervention-grid'>{interventionCards.map(c=>{const used=session.usedInterventions.includes(c.id);return <article className={used?'used':''} key={c.id}><div className='card-top'><b>{c.name}</b><span>{used?'ĐÃ DÙNG':'1 LƯỢT'}</span></div><p>{c.description}</p><small><b>Điều kiện:</b> {c.condition}</small><small><b>Thời điểm:</b> {c.timing}</small><small><b>Hiệu ứng:</b> {c.effect}</small><button className='primary' disabled={used} onClick={()=>save({...session,usedInterventions:[...session.usedInterventions,c.id]})}>{used?'Đã tiêu thụ':'Dùng thẻ'}</button>{c.id==='i-02'&&!used&&rhythmEligible&&<button className='text-link' onClick={()=>go('rhythm')}>Đi tới Nhịp–Phách <ArrowRight/></button>}</article>})}</div></main>}
 type VenEvidence={text:string;correct:boolean}
 type VenRound={answer:string;evidences:VenEvidence[]}
 const VEN_MAX_QUESTIONS=2
@@ -174,7 +175,155 @@ function QA(){
 function Game({go,step,setStep}:{go:(p:Page)=>void;step:number;setStep:(n:number)=>void}){return <main className="page game-page"><div className="eyebrow">CHIẾU CHÈO SƯƠNG OAN <span>COMPANION CHO BỘ GAME VẬT LÝ</span></div><h1>Một câu chuyện<br/><em>nhiều góc nhìn.</em></h1><p className="lead">Website không thay thế bàn chơi. Nó mở thêm bối cảnh, lưu lại hành trình và giúp cả nhóm cùng đọc một tình huống.</p><div className="chapter-picker"><span>CHƯƠNG ĐANG CHƠI</span>{chapters.map((c,i)=><button className={step===i?"selected":""} onClick={()=>setStep(i)} key={c}>Chương {i+1}<small>{c}</small></button>)}</div><div className="game-grid"><div className="game-panel"><span className="eyebrow">BẮT ĐẦU TỪ VẬT PHẨM TRÊN BÀN</span><h2>Quét Thẻ Oan</h2><p>Đưa camera vào mã QR trên lá bài. Màn hình tình huống sẽ mở đúng chương và đúng câu chuyện.</p><button className="primary" onClick={()=>go("oan")}>Mở mô phỏng QR <ArrowRight/></button></div><div className="game-panel dark"><span className="eyebrow">MỘT LẦN MỖI CHƯƠNG</span><h2>AI Vén Màn</h2><p>Đặt câu hỏi, chọn bằng chứng, rồi xem cách câu chuyện được giải thích.</p><button className="outline-light" onClick={()=>go("ven")}>Vén màn chương {step+1} <Sparkles/></button><button className="text-link" onClick={()=>go("rhythm")}>Thử Nhịp–Phách <ArrowRight/></button></div></div></main>}
 function Oan({code,setCode,state,validate,go}:{code:string;setCode:(s:string)=>void;state:string;validate:()=>void;go:(p:Page)=>void}){return <main className="page oan-page"><button className="back" onClick={()=>go("game")}>← Về game hub</button><div className="oan-card"><div className="eyebrow">THẺ OAN · CHƯƠNG I <span>OAN-01</span></div><h1>Tiếng gọi<br/><em>ngoài sân.</em></h1><p className="story">Trong một buổi diễn, một lời truyền miệng khiến nhân vật bị nhìn bằng ánh mắt khác. Hãy đọc tình huống trên Thẻ Oan trước khi tìm góc nhìn phù hợp.</p><div className="code-field"><label>MÃ GÓC NHÌN</label><input inputMode="numeric" maxLength={4} value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,""))} placeholder="— — — —"/><button className="primary" onClick={validate}>Kiểm tra mã <ArrowRight/></button></div>{state!=="idle"&&<div className={`result ${state}`}>{state==="ok"?<><Check/><strong>GIẢI OAN THÀNH CÔNG</strong><p>Góc nhìn phù hợp. Oan không bị trừ.</p></>:<><X/><strong>GÓC NHÌN CHƯA PHÙ HỢP</strong><p>Thử xem lại tình huống và góc nhìn của nhân vật.</p></>}</div>}<small className="privacy">Mã từ chương khác không thể giải tình huống này.</small></div></main>}
 function Ven({question,setQuestion,picked,setPicked,done,submit,go}:{question:string;setQuestion:(s:string)=>void;picked:string[];setPicked:(s:string[])=>void;done:boolean;submit:()=>void;go:(p:Page)=>void}){const evidence=["Lời kể của người trong cuộc","Âm thanh sau tấm màn","Lời đồn ở đầu làng","Động tác trên chiếu"];return <main className="page ven-page"><button className="back" onClick={()=>go("game")}>← Về game hub</button><div className="eyebrow">AI VÉN MÀN · CHƯƠNG I <span>{done?"ĐÃ DÙNG":"1 / 1 LƯỢT"}</span></div><h1>Đừng hỏi<br/><em>đáp án ngay.</em></h1>{!done?<><p className="lead">Đặt một câu hỏi. Sau đó chọn những mảnh bằng chứng giúp bạn tự nhìn ra câu trả lời.</p><div className="ven-question"><textarea value={question} onChange={e=>setQuestion(e.target.value)} placeholder="Tại sao nhân vật lại bị hiểu lầm?"/><span>{question.length}/140</span></div><div className="evidence-list">{evidence.map((e,i)=><button className={picked.includes(String(i))?"picked":""} onClick={()=>setPicked(picked.includes(String(i))?picked.filter(x=>x!==String(i)):[...picked,String(i)])} key={e}><span>{picked.includes(String(i))?<Check/>:String.fromCharCode(65+i)}</span><div><b>{e}</b><p>Chi tiết được truy xuất từ dữ liệu tình huống của chương hiện tại.</p></div></button>)}</div><button className="primary" disabled={!question||!picked.length} onClick={submit}>Đánh giá bằng chứng <ArrowRight/></button></>:<div className="ven-result"><div className="result ok"><Check/><strong>VÉN MÀN THÀNH CÔNG</strong><p>Bạn đã tìm đúng những bằng chứng quan trọng.</p></div><h2>Vì sao nhân vật bị hiểu lầm?</h2><p>Những chi tiết từ người trong cuộc và ngôn ngữ sân khấu giúp ta nhận ra điều nhân vật thực sự đang cố bảo vệ.</p><small>Nguồn: dữ liệu tình huống OAN-01 · Giải thích mô phỏng có kiểm soát</small></div>}</main>}
-function Rhythm({go}:{go:(p:Page)=>void}){const [code,setCode]=useState("");const [started,setStarted]=useState(false);const [taps,setTaps]=useState<number[]>([]);const [result,setResult]=useState<number|null>(null);const sequence=[0,420,840,1260,1680];const begin=()=>{if(code==="2714")setStarted(true)};const tap=()=>{if(!started||result!==null)return;const now=performance.now();setTaps(t=>[...t,now]);if(taps.length+1===sequence.length){const accuracy=Math.max(0,Math.round(100-Math.abs((now-taps[0])-1680)/25));setResult(Math.min(100,accuracy))}};return <main className="page rhythm-page"><button className="back" onClick={()=>go("game")}>← Về game hub</button><div className="eyebrow">THẺ NHỊP–PHÁCH <span>MÃ 2714 · CẤP ĐỘ 1</span></div><h1>Lắng nghe<br/><em>rồi đáp lại.</em></h1>{!started?<div className="rhythm-entry"><p>Nhập mã trên Thẻ Nhịp–Phách để mở mẫu nhịp đã được định sẵn.</p><label>NHẬP MÃ THẺ NHỊP–PHÁCH</label><input inputMode="numeric" maxLength={4} value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,""))} placeholder="— — — —"/><button className="primary" onClick={begin}>Mở thử thách <ArrowRight/></button>{code&&code!=="2714"&&<small>Mã chưa khớp thẻ nào.</small>}</div>:<div className="rhythm-challenge"><p>Quan sát nhịp, sau đó ấn nút theo đúng phách.</p><div className="beats">{sequence.map((_,i)=><span className={taps.length>i?"hit":""} key={i}>{i+1}</span>)}</div><button className="clapper" onClick={tap}>ẤN THEO PHÁCH</button>{result!==null&&<div className={result>=80?"result ok":"result fail"}><strong>{result}% — {result>=95?"Qua vòng xuất sắc":result>=80?"Qua vòng":"Chưa đạt ngưỡng 80%"}</strong><p>{result>=95?"+2 điểm Hiểu Chèo":result>=80?"+1 điểm Hiểu Chèo":"Bạn còn 1 lượt thử."}</p></div>}<small>Trong Chèo, nhịp và phách góp phần giữ thời gian cho câu hát và tạo sắc thái cho tiết mục.</small></div>}</main>}
+function beatLabel(b:{e:number;dev:number;label:BeatLabel}){
+  const dev=Math.round(b.dev)
+  const sign=dev>=0?'+':''
+  if(b.label==='moc')return{icon:null,text:'Mốc'}
+  if(b.label==='dung')return{icon:<Check/>,text:`Đúng phách (${sign}${dev}ms)`}
+  if(b.label==='som')return{icon:<TriangleAlert/>,text:`Hơi sớm (${sign}${dev}ms)`}
+  if(b.label==='muon')return{icon:<TriangleAlert/>,text:`Hơi muộn (${sign}${dev}ms)`}
+  return{icon:<X/>,text:`Lệch nhiều (${sign}${dev}ms)`}
+}
+function Rhythm({go,session,save}:{go:(p:Page)=>void;session:GameSession;save:(s:GameSession)=>void}){
+  const [code,setCode]=useState("")
+  const [activeCode,setActiveCode]=useState<string|null>(null)
+  const [phase,setPhase]=useState<'entry'|'ready'|'playing'|'your-turn'|'result'>('entry')
+  const [taps,setTaps]=useState<number[]>([])
+  const [litIndex,setLitIndex]=useState(-1)
+  const [soundOn,setSoundOn]=useState(true)
+  const [result,setResult]=useState<RhythmResult|null>(null)
+  const [practice,setPractice]=useState(false)
+  const [notice,setNotice]=useState('')
+  const audioCtxRef=useRef<AudioContext|null>(null)
+  const lastTapRef=useRef(0)
+  const timersRef=useRef<ReturnType<typeof setTimeout>[]>([])
+  const silenceTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null)
+  const card=activeCode?findRhythmCard(activeCode):undefined
+
+  useEffect(()=>()=>{timersRef.current.forEach(clearTimeout);if(silenceTimerRef.current)clearTimeout(silenceTimerRef.current);audioCtxRef.current?.close?.()},[])
+
+  const begin=()=>{if(findRhythmCard(code)){setActiveCode(code);setPhase('ready')}}
+
+  const ensureAudio=()=>{
+    if(!soundOn)return null
+    if(!audioCtxRef.current){
+      try{const Ctor=window.AudioContext||(window as any).webkitAudioContext;audioCtxRef.current=new Ctor()}catch{return null}
+    }
+    return audioCtxRef.current
+  }
+
+  // ponytail: visual beat timing uses setTimeout (not a full requestAnimationFrame scheduler) --
+  // drift is imperceptible over a ~1.7s pattern; upgrade if longer/faster patterns are added later.
+  const playPattern=()=>{
+    if(!card)return
+    setPhase('playing')
+    setLitIndex(-1)
+    const ctx=ensureAudio()
+    if(ctx&&ctx.state!=='running')ctx.resume?.()
+    const base=ctx?ctx.currentTime+0.05:0
+    card.beats.forEach((t,i)=>{
+      if(ctx){
+        const osc=ctx.createOscillator();const gain=ctx.createGain()
+        osc.type='square';osc.frequency.value=880
+        gain.gain.setValueAtTime(0.0001,base+t/1000)
+        gain.gain.linearRampToValueAtTime(0.18,base+t/1000+0.005)
+        gain.gain.linearRampToValueAtTime(0.0001,base+t/1000+0.06)
+        osc.connect(gain).connect(ctx.destination)
+        osc.start(base+t/1000);osc.stop(base+t/1000+0.07)
+      }
+      timersRef.current.push(setTimeout(()=>{setLitIndex(i);navigator.vibrate?.(30)},t))
+    })
+    timersRef.current.push(setTimeout(()=>{setLitIndex(-1);setPhase('your-turn')},card.beats[card.beats.length-1]+350))
+  }
+
+  const abortTap=()=>{
+    setTaps([])
+    setNotice('Nhịp bị ngắt. Thử lại, lượt này không bị tính.')
+    timersRef.current.push(setTimeout(()=>setNotice(''),3000))
+  }
+
+  const finish=(rawTaps:number[])=>{
+    if(!card)return
+    const r=scoreRhythm(card.beats,rawTaps,card.perfectMs,card.zeroMs)
+    if(!practice){
+      const prevAwarded=rhythmAwarded(session.rhythmBest,card)
+      const newAwarded=rhythmAwarded(r.pct,card)
+      const delta=Math.max(0,newAwarded-prevAwarded)
+      save({...session,rhythmAttempts:session.rhythmAttempts+1,rhythmBest:Math.max(session.rhythmBest,r.pct),rhythmUsed:true,hieu:session.hieu+delta})
+    }
+    setResult(r)
+    setPhase('result')
+  }
+
+  const onTap=()=>{
+    if(phase!=='your-turn'||!card)return
+    const now=performance.now()
+    if(now-lastTapRef.current<120)return
+    lastTapRef.current=now
+    if(silenceTimerRef.current)clearTimeout(silenceTimerRef.current)
+    const next=[...taps,now]
+    setTaps(next)
+    if(next.length<card.beats.length)silenceTimerRef.current=setTimeout(abortTap,2000)
+    else finish(next)
+  }
+
+  const retry=()=>{setTaps([]);setResult(null);setNotice('');setPhase('your-turn')}
+  const startPractice=()=>{setPractice(true);setTaps([]);setResult(null);setNotice('');setPhase('ready')}
+  const useIntervention=()=>save({...session,usedInterventions:[...session.usedInterventions,'i-02']})
+
+  const maxAttempts=card?card.baseAttempts+(session.usedInterventions.includes('i-02')?1:0):0
+  const attemptNumber=Math.min(session.rhythmAttempts+1,Math.max(maxAttempts,1))
+  const attemptsLeftAfter=maxAttempts-session.rhythmAttempts
+  const passed=!!result&&!!card&&result.pct>=card.passAt
+  const excellent=!!result&&!!card&&result.pct>=card.excellentAt
+  const offerIntervention=!!result&&!passed&&!practice&&session.rhythmAttempts===1&&!session.usedInterventions.includes('i-02')
+
+  return <main className='page rhythm-page'>
+    <button className='back' onClick={()=>go('game')}>← Về game hub</button>
+    <div className='eyebrow'>THẺ NHỊP–PHÁCH <span>MÃ {activeCode??'2714'} · CẤP ĐỘ {card?.level??1}</span></div>
+    <h1>Lắng nghe<br/><em>rồi đáp lại.</em></h1>
+
+    {phase==='entry'&&<div className='rhythm-entry'>
+      <p>Nhập mã trên Thẻ Nhịp–Phách để mở mẫu nhịp đã được định sẵn.</p>
+      <label htmlFor='rhythm-code'>NHẬP MÃ THẺ NHỊP–PHÁCH</label>
+      <input id='rhythm-code' inputMode='numeric' maxLength={4} value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,''))} placeholder='— — — —'/>
+      <button className='primary' onClick={begin}>Mở thử thách <ArrowRight/></button>
+      {code&&!findRhythmCard(code)&&<small>Mã chưa khớp thẻ nào.</small>}
+    </div>}
+
+    {(phase==='ready'||phase==='playing'||phase==='your-turn')&&card&&<div className='rhythm-challenge'>
+      <div className='rhythm-meta'>
+        <span>{practice?'Luyện tập (không tính điểm)':`Lượt ${attemptNumber}/${maxAttempts}`}</span>
+        <button className='sound-toggle' type='button' aria-pressed={soundOn} aria-label={`Âm thanh: ${soundOn?'bật':'tắt'}`} onClick={()=>setSoundOn(s=>!s)}>{soundOn?<Volume2/>:<VolumeX/>}</button>
+      </div>
+      <p>{phase==='ready'?'Nghe mẫu trước khi gõ.':phase==='playing'?'Đang phát mẫu...':'Gõ 5 phách theo mẫu. Phách đầu là mốc bắt đầu.'}</p>
+      <div className='beats'>{card.beats.map((_,i)=><span className={litIndex===i?'hit':taps.length>i?'tapped':''} key={i}>{i+1}</span>)}</div>
+      <div className='beat-numbers' aria-hidden='true'>1 · 2 · 3 · 4 · 5</div>
+      <button className='outline' type='button' onClick={playPattern} disabled={phase==='playing'}>{phase==='playing'?'▶ Đang phát...':'▶ Nghe mẫu'}</button>
+      {notice&&<p className='rhythm-notice' role='status'>{notice}</p>}
+      <button className='clapper' type='button' disabled={phase!=='your-turn'} onPointerDown={onTap} onKeyDown={e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();onTap()}}}>GÕ THEO PHÁCH</button>
+      <small>Trong Chèo, nhịp và phách góp phần giữ thời gian cho câu hát và tạo sắc thái cho tiết mục.</small>
+    </div>}
+
+    {phase==='result'&&result&&card&&<div className='rhythm-result' role='status' aria-live='polite'>
+      <strong className='rhythm-pct'>{result.pct}%</strong>
+      <p className='rhythm-verdict'>{practice?'Kết quả luyện tập, không tính điểm.':excellent?'Qua vòng xuất sắc — +2 điểm Hiểu Chèo':passed?'Qua vòng — +1 điểm Hiểu Chèo':'Chưa đạt ngưỡng 80%'}</p>
+      <div className='beat-chips'>{result.beats.map((b,i)=>{const l=beatLabel(b);return <span className={`beat-${b.label}`} key={i}>{l.icon}{l.text}</span>})}</div>
+      <div className='rhythm-actions'>
+        {!practice&&passed&&<button className='primary' onClick={()=>go('game')}>Về game hub <ArrowRight/></button>}
+        {!practice&&!passed&&attemptsLeftAfter>0&&<button className='primary' onClick={retry}>Thử lại <ArrowRight/></button>}
+        {!practice&&!passed&&attemptsLeftAfter<=0&&<button className='primary' onClick={startPractice}>Luyện tập (không tính điểm)</button>}
+        {practice&&<button className='primary' onClick={retry}>Thử lại <ArrowRight/></button>}
+        <button className='outline' onClick={playPattern}>Nghe lại mẫu</button>
+      </div>
+      {offerIntervention&&<div className='rhythm-intervention'>
+        <b>Thẻ Can Thiệp: Giữ nhịp câu chuyện</b>
+        <p>Thêm 1 lượt thử.</p>
+        <button className='outline' onClick={useIntervention}>Dùng thẻ</button>
+      </div>}
+    </div>}
+  </main>
+}
 function Guide({go}:{go:(p:Page)=>void}){return <main className="page guide-page"><div className="eyebrow">HƯỚNG DẪN CHƠI <span>ĐẶT BÀN · QUÉT THẺ · SUY LUẬN</span></div><h1>Chơi cùng nhau,<br/><em>nhìn khác đi.</em></h1><p className="lead">Trang web là người bạn đồng hành. Bàn chơi vật lý vẫn là nơi câu chuyện diễn ra.</p><div className="guide-steps">{[['01','Đặt bàn chơi','Chia vai Người Kể Tích, Người Soi Chứng và đặt các bộ thẻ trong tầm tay.'],['02','Mở Thẻ Tích Truyện','Đọc theo thứ tự. Khi gặp dấu OAN, cả nhóm dừng lại và không vội phán xét.'],['03','Nhập mã trên thẻ','Nhập mã 4 chữ số của Thẻ Góc Nhìn để đọc lời chứng của nhân vật.'],['04','Ghi nhớ lựa chọn','Dùng Thẻ Can Thiệp khi nhóm cần thêm một cơ hội. AI Vén Màn chỉ mở theo giới hạn của chương.']].map(s=><article key={s[0]}><span>{s[0]}</span><h2>{s[1]}</h2><p>{s[2]}</p></article>)}</div><button className="primary" onClick={()=>go('game')}>Mở game hub <ArrowRight/></button></main>}
 function About(){return <main className="page about-page"><div className="eyebrow">VỀ DỰ ÁN <span>CHIẾU CHÈO SƯƠNG OAN</span></div><h1>Di sản để<br/><em>tiếp tục sống.</em></h1><p className="lead">Một nền tảng giáo dục dành cho học sinh trung học, kết nối trợ lý hỏi đáp về nghệ thuật truyền thống với trải nghiệm của bộ board game vật lý.</p><div className="about-grid"><section><h2>AI Hỏi Đáp Di Sản</h2><p>Trợ lý học tập trả lời về nghệ thuật truyền thống Việt Nam, ưu tiên nguồn đã kiểm chứng. Câu trả lời của AI chỉ là điểm bắt đầu, không thay thế tư liệu chuyên ngành.</p></section><section><h2>Nội dung trò chơi</h2><p>Chiếu Chèo Sương Oan dùng câu chuyện, Góc Nhìn, Oan và Nhịp–Phách để khuyến khích học sinh nhìn một tình huống từ nhiều phía.</p></section><section><h2>Phương pháp</h2><p>Prototype sử dụng dữ liệu mô phỏng có kiểm soát. Những phần cần xác minh được đánh dấu rõ để có thể thay bằng nguồn bảo tàng, trường đại học và cơ quan văn hóa trước khi xuất bản.</p></section></div><section id="nguon-ghi-nhan" className="about-credits"><h2>Nguồn & ghi nhận</h2><ul><li>Nguồn tư liệu của AI: [Nội dung cần bổ sung]</li><li>Quyền hình ảnh: [Nội dung cần bổ sung]</li><li>Đơn vị thực hiện: [Nội dung cần bổ sung]</li><li>Liên hệ: [Nội dung cần bổ sung]</li></ul></section></main>}
 function Journey({go}:{go:(p:Page)=>void}){const [active,setActive]=useState(0);const spaces=Array.from({length:52},(_,i)=>({n:i+1,chapter:Math.min(5,Math.floor(i/11)+1),type:i===0?'start':i===51?'finish':i%11===10?'chapter':i%7===0?'evidence':i%5===0?'choice':'story'}));return <main className="page journey journey-board"><div className="eyebrow">BẢN ĐỒ HÀNH TRÌNH <span>52 Ô · 5 CHƯƠNG</span></div><div className="journey-head"><div><h1>Đường đi không<br/><em>thẳng.</em></h1><p className="lead">Mỗi ô là một lần dừng lại. Mỗi chương mở ra một cách nhìn khác về cùng một câu chuyện.</p></div><div className="journey-progress"><strong>{String(active+1).padStart(2,'0')} / 52</strong><span>Ô ĐANG XEM: {active+1}</span></div></div><div className="board-wrap"><div className="board-grid">{spaces.map(space=><button key={space.n} className={`board-space ${space.type} ${space.n-1===active?'selected':''}`} onClick={()=>setActive(space.n-1)} aria-label={`Ô ${space.n}, chương ${space.chapter}`}><span>{String(space.n).padStart(2,'0')}</span><b>{space.type==='start'?'MỞ':space.type==='finish'?'GIÁC':space.type==='chapter'?`C${space.chapter}`:space.type==='evidence'?'?':space.type==='choice'?'×':'·'}</b></button>)}</div><aside className="space-detail"><span className="eyebrow">Ô {String(active+1).padStart(2,'0')} · CHƯƠNG {spaces[active].chapter}</span><h2>{spaces[active].type==='evidence'?'Một bằng chứng chưa đủ.':spaces[active].type==='choice'?'Bạn sẽ chọn nhìn từ đâu?':spaces[active].type==='chapter'?chapters[spaces[active].chapter-1]:spaces[active].type==='finish'?'Giác':'Tiếng kể tiếp tục.'}</h2><p>{spaces[active].type==='evidence'?'Bằng chứng không tự nói ra đáp án. Nhóm cần đặt nó cạnh một lời chứng khác.':'Chạm vào các ô để xem nhịp của hành trình và mở đúng trải nghiệm khi bàn chơi yêu cầu.'}</p><button className="primary" onClick={()=>go(spaces[active].type==='evidence'?'perspective':'game')}>{spaces[active].type==='evidence'?'Mở Góc Nhìn':'Tiếp tục'} <ArrowRight/></button></aside></div></main>}
