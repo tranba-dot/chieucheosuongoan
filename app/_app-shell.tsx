@@ -29,7 +29,7 @@ const perspectiveCards:Perspective[]=[{id:'p-01',code:'1842',name:'Bác Độ',r
 const perspectiveEvidence:PerspectiveEvidence[]=[{cardId:'p-01',oanId:'oan-01',text:'Bác Độ nhớ tiếng trống vang lần đầu trước khi mọi người chạy về phía giếng. Trình tự này không khớp với lời đồn.',effect:-1},{cardId:'p-02',oanId:'oan-01',text:'Cô Mận nghe một câu nói ngắt quãng, nhưng không nhìn thấy người nói. Thông tin gợi mở nhưng chưa đủ.',effect:0},{cardId:'p-03',oanId:'oan-01',text:'Anh Sửu thấy một dải vải ở sân, nhưng không biết nó thuộc về ai hay xuất hiện lúc nào.',effect:1}];
 const interventionCards:Intervention[]=[{id:'i-01',name:'Xin thêm một lời chứng',description:'Mở thêm một cơ hội xem Thẻ Góc Nhìn sau kết quả chưa đủ.',condition:'Sau kết quả chưa đủ hoặc chưa giúp làm rõ.',timing:'Ngay sau điều tra Góc Nhìn',effect:'Cho phép nhập thêm một mã Góc Nhìn trong cùng Oan.'},{id:'i-02',name:'Giữ nhịp câu chuyện',description:'Bảo toàn một cơ hội thử Nhịp–Phách sau lần thất bại đầu tiên.',condition:'Sau lần thử đầu tiên dưới 80%.',timing:'Ngay sau lần thử Nhịp–Phách',effect:'Bảo toàn cơ hội tiếp theo.'}];
 const pageToPath:Partial<Record<Page,string>>={home:'/',qa:'/hoi-dap',game:'/game',story:'/tich-truyen',oan:'/kiem-chung',perspective:'/goc-nhin',intervention:'/can-thiep',ven:'/ai-ven-man',rhythm:'/nhip-phach',guide:'/huong-dan',about:'/gioi-thieu',journey:'/hanh-trinh'};
-function AppShell({initialPage='home'}:{initialPage?:Page}){const router=useRouter();const {session,save,storageError}=useGameSession();const [page,setPage]=useState<Page>(initialPage),[menu,setMenu]=useState(false);const go=(p:Page)=>{setPage(p);setMenu(false);window.scrollTo({top:0,behavior:'smooth'});const path=pageToPath[p];if(path)router.push(path)};useEffect(()=>{if(!menu)return;const esc=(e:KeyboardEvent)=>{if(e.key==='Escape')setMenu(false)};window.addEventListener('keydown',esc);return()=>window.removeEventListener('keydown',esc)},[menu]);const navItems:[Page,string][]=[['home','TRANG CHỦ'],['qa','AI HỎI ĐÁP'],['game','TRÒ CHƠI'],['about','VỀ DỰ ÁN']];return <><header className='topbar'><button className='brand' onClick={()=>go('home')}><span>CHIẾU CHÈO</span><b>SƯƠNG OAN</b></button><nav>{navItems.map(([p,l])=><button key={p} onClick={()=>go(p)}>{l}</button>)}</nav><button className='menu-button' aria-label={menu?'Đóng menu':'Mở menu'} aria-expanded={menu} aria-controls='mobile-menu' onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button><div id='mobile-menu' className='mobile-menu' hidden={!menu}>{navItems.map(([p,l])=><button key={p} onClick={()=>go(p)}>{l}</button>)}</div></header>{storageError&&<div className='storage-warning' role='status'>Không lưu được ván trên máy này. Ván sẽ mất khi tải lại trang.</div>}{page==='home'&&<Home go={go}/>} {page==='qa'&&<QA/>} {page==='game'&&<UpdatedGame go={go} session={session}/>} {page==='story'&&<UpdatedStory card={storyCards.find(x=>x.id===session.storyId)||storyCards[0]} go={go}/>} {page==='oan'&&<UpdatedOan go={go}/>} {page==='perspective'&&<Suspense fallback={null}><UpdatedPerspective go={go} session={session} save={save}/></Suspense>} {page==='intervention'&&<UpdatedIntervention session={session} save={save} go={go}/>} {page==='ven'&&<UpdatedVen session={session} save={save} go={go}/>} {page==='rhythm'&&<Rhythm go={go} session={session} save={save}/>} {page==='journey'&&<Journey go={go}/>} {page==='about'&&<About/>}{page==='guide'&&<Guide go={go}/>}<Footer go={go}/></>}
+function AppShell({initialPage='home'}:{initialPage?:Page}){const router=useRouter();const {session,save,storageError}=useGameSession();const [page,setPage]=useState<Page>(initialPage),[menu,setMenu]=useState(false);const go=(p:Page)=>{setPage(p);setMenu(false);window.scrollTo({top:0,behavior:'smooth'});const path=pageToPath[p];if(path)router.push(path)};useEffect(()=>{if(!menu)return;const esc=(e:KeyboardEvent)=>{if(e.key==='Escape')setMenu(false)};window.addEventListener('keydown',esc);return()=>window.removeEventListener('keydown',esc)},[menu]);const navItems:[Page,string][]=[['home','TRANG CHỦ'],['qa','AI HỎI ĐÁP'],['game','TRÒ CHƠI'],['about','VỀ DỰ ÁN']];return <><header className='topbar'><button className='brand' onClick={()=>go('home')}><span>CHIẾU CHÈO</span><b>SƯƠNG OAN</b></button><nav>{navItems.map(([p,l])=><button key={p} onClick={()=>go(p)}>{l}</button>)}</nav><button className='menu-button' aria-label={menu?'Đóng menu':'Mở menu'} aria-expanded={menu} aria-controls='mobile-menu' onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button><div id='mobile-menu' className='mobile-menu' hidden={!menu}>{navItems.map(([p,l])=><button key={p} onClick={()=>go(p)}>{l}</button>)}</div></header>{storageError&&<div className='storage-warning' role='status'>Không lưu được ván trên máy này. Ván sẽ mất khi tải lại trang.</div>}{page==='home'&&<Home go={go}/>} {page==='qa'&&<QA/>} {page==='game'&&<UpdatedGame go={go} session={session}/>} {page==='story'&&<UpdatedStory card={storyCards.find(x=>x.id===session.storyId)||storyCards[0]} go={go}/>} {page==='oan'&&<UpdatedOan go={go}/>} {page==='perspective'&&<Suspense fallback={null}><UpdatedPerspective go={go} session={session} save={save}/></Suspense>} {page==='intervention'&&<Suspense fallback={null}><UpdatedIntervention session={session} save={save} go={go}/></Suspense>} {page==='ven'&&<UpdatedVen session={session} save={save} go={go}/>} {page==='rhythm'&&<Rhythm go={go} session={session} save={save}/>} {page==='journey'&&<Journey go={go}/>} {page==='about'&&<About/>}{page==='guide'&&<Guide go={go}/>}<Footer go={go}/></>}
 function Footer({go}:{go:(p:Page)=>void}){return <footer className='site-footer'><div className='footer-brand'>CHIẾU CHÈO SƯƠNG OAN</div><p className='footer-tagline'>Một không gian học tập về nghệ thuật truyền thống Việt Nam.</p><nav className='footer-links'><button onClick={()=>go('guide')}>Hướng dẫn</button><button onClick={()=>go('about')}>Về dự án</button><a href='/gioi-thieu#nguon-ghi-nhan'>Nguồn & ghi nhận</a></nav><div className='footer-disclaimers'><p>Nội dung do AI tạo có thể chưa chính xác; hãy đối chiếu nguồn.</p><p>Hình minh họa mang tính giáo dục, không phải tư liệu lưu trữ.</p><p>© [Nội dung cần bổ sung: đơn vị thực hiện / năm / giấy phép]</p></div></footer>}
 function UpdatedGame({go,session}:{go:(p:Page)=>void;session:GameSession}){return <main className='page game-page'><div className='eyebrow'>CHIẾU CHÈO SƯƠNG OAN <span>COMPANION CHO BỘ GAME VẬT LÝ</span></div><h1>Một câu chuyện<br/><em>nhiều góc nhìn.</em></h1><p className='lead'>Website không thay thế bàn chơi. Nó mở đúng thông tin cho từng thẻ và từng vai trò.</p><div className='game-stats'><div><b>{session.oan}</b><span>ĐIỂM OAN</span></div><div><b>{session.hieu}</b><span>HIỂU CHÈO</span></div><div><b>{session.usedPerspectives.length}</b><span>LỜI CHỨNG</span></div></div><div className='game-grid'><div className='game-panel'><span className='eyebrow'>NGƯỜI KỂ TÍCH</span><h2>Thẻ Tích Truyện</h2><p>Người Kể Tích đọc thẻ cho cả nhóm. Thẻ có dấu Oan sẽ mở tình huống điều tra.</p><button className='primary' onClick={()=>go('story')}>Mở thẻ hiện tại <ArrowRight/></button></div><div className='game-panel dark'><span className='eyebrow'>NGƯỜI SOI CHỨNG</span><h2>Góc Nhìn</h2><p>Chọn một nhân vật phụ làm nguồn thông tin. Lá bài chỉ cung cấp bằng chứng.</p><button className='outline-light' onClick={()=>go('oan')}>Mở tình huống Oan <Eye/></button></div></div><div className='card-system'><b>THẺ TRONG BỘ GAME</b><p>Thẻ Tích Truyện · Thẻ Góc Nhìn · Thẻ Can Thiệp · Thẻ Nhịp–Phách · Thẻ AI Vén Màn</p><button className='text-link' onClick={()=>go('intervention')}>Xem Thẻ Can Thiệp <ArrowRight/></button></div></main>}
 function UpdatedStory({card,go}:{card:StoryCard;go:(p:Page)=>void}){return <main className='page story-page'><div className='eyebrow'>THẺ TÍCH TRUYỆN · CHƯƠNG {card.chapter}<span>{card.type==='oan'?'● CÓ TÌNH HUỐNG OAN':'THẺ THƯỜNG'}</span></div><div className={card.type==='oan'?'story-card oan-mark':'story-card'}><span className='story-symbol'>{card.type==='oan'?'O':'T'}</span><h1>{card.title}</h1><p>{card.content}</p>{card.type==='oan'&&<div className='oan-notice'><b>OAN</b><span>Thẻ này mở hệ thống điều tra Góc Nhìn.</span></div>}</div><button className='primary' onClick={()=>card.type==='oan'?go('oan'):go('game')}>{card.type==='oan'?'Mở tình huống Oan':'Tiếp tục câu chuyện'} <ArrowRight/></button><button className='text-link' onClick={()=>go('ven')}>Thẻ AI Vén Màn <Sparkles/></button></main>}
@@ -53,7 +53,7 @@ function UpdatedPerspective({go,session,save}:{go:(p:Page)=>void;session:GameSes
     setErrorType('none')
     const key=card.id+session.oanId
     const reopened=session.usedPerspectives.includes(key)
-    if(!reopened)save({...session,usedPerspectives:[...session.usedPerspectives,key],oan:session.oan+ev.effect})
+    save(reopened?{...session,lastPerspectiveEffect:ev.effect}:{...session,usedPerspectives:[...session.usedPerspectives,key],oan:session.oan+ev.effect,lastPerspectiveEffect:ev.effect})
     setResult({card,evidence:ev,reopened})
   }
 
@@ -99,61 +99,206 @@ function UpdatedPerspective({go,session,save}:{go:(p:Page)=>void;session:GameSes
     </div>}
   </main>
 }
-function UpdatedIntervention({session,save,go}:{session:GameSession;save:(s:GameSession)=>void;go:(p:Page)=>void}){const rhythmCard=findRhythmCard('2714');const rhythmEligible=session.rhythmAttempts>=1&&session.rhythmBest<(rhythmCard?.passAt??80);return <main className='page intervention-page'><button className='back' onClick={()=>go('game')}>← Về game hub</button><div className='eyebrow'>THẺ CAN THIỆP <span>NGUỒN LỰC CHIẾN THUẬT</span></div><h1>Nhóm vẫn có<br/><em>quyền lựa chọn.</em></h1><div className='intervention-grid'>{interventionCards.map(c=>{const used=session.usedInterventions.includes(c.id);return <article className={used?'used':''} key={c.id}><div className='card-top'><b>{c.name}</b><span>{used?'ĐÃ DÙNG':'1 LƯỢT'}</span></div><p>{c.description}</p><small><b>Điều kiện:</b> {c.condition}</small><small><b>Thời điểm:</b> {c.timing}</small><small><b>Hiệu ứng:</b> {c.effect}</small><button className='primary' disabled={used} onClick={()=>save({...session,usedInterventions:[...session.usedInterventions,c.id]})}>{used?'Đã tiêu thụ':'Dùng thẻ'}</button>{c.id==='i-02'&&!used&&rhythmEligible&&<button className='text-link' onClick={()=>go('rhythm')}>Đi tới Nhịp–Phách <ArrowRight/></button>}</article>})}</div></main>}
+function ConfirmDialog({title,body,confirmLabel,cancelLabel,onConfirm,onCancel}:{title:string;body:React.ReactNode;confirmLabel:string;cancelLabel?:string;onConfirm:()=>void;onCancel:()=>void}){
+  const cancelRef=useRef<HTMLButtonElement>(null)
+  useEffect(()=>{
+    cancelRef.current?.focus()
+    const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape')onCancel()}
+    window.addEventListener('keydown',onKey)
+    return ()=>window.removeEventListener('keydown',onKey)
+  },[])
+  return <div className='dialog-backdrop' onClick={onCancel}>
+    <div className='dialog-box' role='dialog' aria-modal='true' aria-labelledby='dialog-title'>
+      <h2 id='dialog-title'>{title}</h2>
+      <p>{body}</p>
+      <div className='dialog-actions'>
+        <button ref={cancelRef} className='outline' onClick={onCancel}>{cancelLabel??'Để sau'}</button>
+        <button className='primary' onClick={onConfirm}>{confirmLabel}</button>
+      </div>
+    </div>
+  </div>
+}
+function interventionEffectMessage(id:string,go:(p:Page)=>void):React.ReactNode{
+  if(id==='i-01')return 'Đã ghi nhận. Hãy thực hiện trên bàn chơi: nhập thêm một mã Góc Nhìn.'
+  if(id==='i-02')return <>Đã thêm 1 lượt thử Nhịp–Phách. <button className='text-link' onClick={()=>go('rhythm')}>Đi tới Nhịp–Phách <ArrowRight/></button></>
+  return 'Đã ghi nhận.'
+}
+function UpdatedIntervention({session,save,go}:{session:GameSession;save:(s:GameSession)=>void;go:(p:Page)=>void}){
+  const searchParams=useSearchParams()
+  const highlightId=searchParams.get('the')
+  const rhythmCard=findRhythmCard('2714')
+  const eligibleFor=(id:string)=>id==='i-01'?session.lastPerspectiveEffect!==undefined&&session.lastPerspectiveEffect>=0:id==='i-02'?session.rhythmAttempts>=1&&session.rhythmBest<(rhythmCard?.passAt??80):true
+  const [confirming,setConfirming]=useState<Intervention|null>(null)
+  const [toast,setToast]=useState<React.ReactNode>(null)
+  const cardRefs=useRef<Record<string,HTMLElement|null>>({})
+
+  useEffect(()=>{
+    if(highlightId)cardRefs.current[highlightId]?.scrollIntoView({behavior:'smooth',block:'center'})
+  },[highlightId])
+
+  const confirmUse=()=>{
+    if(!confirming)return
+    const c=confirming
+    save({...session,usedInterventions:[...session.usedInterventions,c.id],interventionLog:{...(session.interventionLog||{}),[c.id]:{at:Date.now(),chapter:session.chapter}}})
+    setConfirming(null)
+    setToast(interventionEffectMessage(c.id,go))
+    setTimeout(()=>setToast(null),6000)
+  }
+
+  return <main className='page intervention-page'>
+    <button className='back' onClick={()=>go('game')}>← Về game hub</button>
+    <div className='eyebrow'>THẺ CAN THIỆP <span>NGUỒN LỰC CHIẾN THUẬT</span></div>
+    <h1>Nhóm vẫn có<br/><em>quyền lựa chọn.</em></h1>
+    {toast&&<div className='intervention-toast' role='status'>{toast}</div>}
+    <div className='intervention-grid'>{interventionCards.map(c=>{
+      const used=session.usedInterventions.includes(c.id)
+      const eligible=eligibleFor(c.id)
+      const usedAt=session.interventionLog?.[c.id]
+      return <article ref={el=>{cardRefs.current[c.id]=el}} className={`${used?'used':''}${highlightId===c.id?' highlighted':''}`} key={c.id}>
+        <div className='card-top'>
+          <b>{c.name}</b>
+          {used?<span className='chip'>ĐÃ DÙNG</span>:eligible?<span className='chip chip-ok'>Đủ điều kiện</span>:<span className='chip chip-warn'>Chưa đủ điều kiện theo ghi nhận trên máy này</span>}
+        </div>
+        <p>{c.description}</p>
+        <div className='intervention-meta'>
+          <div><b>Điều kiện</b><span>{c.condition}</span></div>
+          <div><b>Thời điểm</b><span>{c.timing}</span></div>
+          <div><b>Hiệu ứng</b><span>{c.effect}</span></div>
+        </div>
+        {used
+          ?<small className='used-at'>Đã dùng lúc {usedAt?new Date(usedAt.at).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}):'--:--'} · Chương {usedAt?.chapter??session.chapter}</small>
+          :<button className='primary' onClick={()=>setConfirming(c)}>Dùng thẻ</button>}
+      </article>
+    })}</div>
+    {confirming&&<ConfirmDialog
+      title={`Dùng thẻ "${confirming.name}"?`}
+      body={<>Thẻ chỉ dùng được 1 lần trong ván.{!eligibleFor(confirming.id)&&<><br/><br/>Điều kiện chưa khớp với ghi nhận trên máy này. Vẫn dùng?</>}</>}
+      confirmLabel='Dùng thẻ'
+      cancelLabel='Để sau'
+      onConfirm={confirmUse}
+      onCancel={()=>setConfirming(null)}
+    />}
+  </main>
+}
 type VenEvidence={text:string;correct:boolean}
 type VenRound={answer:string;evidences:VenEvidence[]}
 const VEN_MAX_QUESTIONS=2
+const VEN_ROUND_KEY='ccts-ven-round'
+const VEN_SLOW_MS=8000
+const VEN_TIMEOUT_MS=45000
+type StoredVenRound={chapter:number;question:string;round:VenRound;picked:number[]}
 function UpdatedVen({session,save,go}:{session:GameSession;save:(s:GameSession)=>void;go:(p:Page)=>void}){
   const chapter=session.chapter
   const asked=session.venAsked[chapter]||0
   const left=VEN_MAX_QUESTIONS-asked
   const [question,setQuestion]=useState('')
   const [loading,setLoading]=useState(false)
+  const [slow,setSlow]=useState(false)
   const [notice,setNotice]=useState('')
+  const [noticeType,setNoticeType]=useState<'none'|'network'|'refused'>('none')
   const [round,setRound]=useState<VenRound|null>(null)
+  const [roundChapter,setRoundChapter]=useState<number|null>(null)
   const [picked,setPicked]=useState<number[]>([])
   const [revealed,setRevealed]=useState(false)
+  const [restoredNotice,setRestoredNotice]=useState(false)
   const midRound=(!!round&&!revealed)||loading
   const win=!!round&&picked.length===2&&picked.every(i=>round.evidences[i].correct)
+  const displayChapter=roundChapter??chapter
 
-  const reset=()=>{setQuestion('');setNotice('');setRound(null);setPicked([]);setRevealed(false)}
+  useEffect(()=>{
+    try{
+      const raw=sessionStorage.getItem(VEN_ROUND_KEY)
+      if(raw){
+        const stored:StoredVenRound=JSON.parse(raw)
+        setRound(stored.round)
+        setPicked(stored.picked||[])
+        setQuestion(stored.question)
+        setRoundChapter(stored.chapter)
+        setRestoredNotice(true)
+      }
+    }catch{}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[])
+
+  const persistRound=(next:StoredVenRound)=>{try{sessionStorage.setItem(VEN_ROUND_KEY,JSON.stringify(next))}catch{}}
+  const clearStoredRound=()=>{try{sessionStorage.removeItem(VEN_ROUND_KEY)}catch{}}
+
+  const reset=()=>{setQuestion('');setNotice('');setNoticeType('none');setRound(null);setRoundChapter(null);setPicked([]);setRevealed(false);setRestoredNotice(false);clearStoredRound()}
   const ask=async()=>{
     setLoading(true)
+    setSlow(false)
     setNotice('')
+    setNoticeType('none')
+    const slowTimer=setTimeout(()=>setSlow(true),VEN_SLOW_MS)
+    const controller=new AbortController()
+    const timeoutTimer=setTimeout(()=>controller.abort(),VEN_TIMEOUT_MS)
     try{
-      const response=await fetch('/api/ven',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,chapter})})
+      const response=await fetch('/api/ven',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,chapter}),signal:controller.signal})
       const data=await response.json()
-      if(data.verdict==='ok')setRound({answer:data.answer,evidences:data.evidences})
-      else setNotice(data.message||data.error||'Không thể kết nối AI lúc này.')
-    }catch{
-      setNotice('Không thể kết nối AI lúc này.')
+      if(data.verdict==='ok'){
+        // Deduct the moment the server says ok, not at reveal -- reveal-time deduction let a reload
+        // after seeing the 4 evidences dodge the per-chapter limit (spec 5.6).
+        save({...session,venAsked:{...session.venAsked,[chapter]:asked+1}})
+        const newRound:VenRound={answer:data.answer,evidences:data.evidences}
+        setRound(newRound)
+        setRoundChapter(chapter)
+        setPicked([])
+        setRevealed(false)
+        persistRound({chapter,question,round:newRound,picked:[]})
+      }else if(data.verdict==='off_topic'||data.verdict==='inappropriate'){
+        setNoticeType('refused')
+        setNotice(data.message||'Câu hỏi chưa phù hợp. Hãy đặt lại câu hỏi khác.')
+      }else{
+        setNoticeType('network')
+        setNotice(data.message||data.error||'Không thể kết nối AI lúc này.')
+      }
+    }catch(err){
+      setNoticeType('network')
+      setNotice((err as {name?:string})?.name==='AbortError'?'AI phản hồi quá chậm.':'Không thể kết nối AI lúc này.')
     }finally{
+      clearTimeout(slowTimer)
+      clearTimeout(timeoutTimer)
       setLoading(false)
+      setSlow(false)
     }
   }
-  const toggle=(i:number)=>setPicked(p=>p.includes(i)?p.filter(n=>n!==i):p.length<2?[...p,i]:p)
-  // ponytail: the question quota lives in localStorage like the rest of the session - clearing site data resets it.
+  const toggle=(i:number)=>setPicked(p=>{
+    const next=p.includes(i)?p.filter(n=>n!==i):p.length<2?[...p,i]:p
+    if(round)persistRound({chapter:displayChapter,question,round,picked:next})
+    return next
+  })
   const reveal=()=>{
-    save({...session,hieu:session.hieu+(win?1:0),venAsked:{...session.venAsked,[chapter]:asked+1}})
+    save({...session,hieu:session.hieu+(win?1:0)})
     setRevealed(true)
+    clearStoredRound()
   }
+  const clearRefusal=()=>{setNotice('');setNoticeType('none')}
 
   return <main className='page ven-page'>
     <button className='back' onClick={()=>go('game')}>← Về game hub</button>
-    <div className='eyebrow'>THẺ AI VÉN MÀN <span>CHƯƠNG {chapter} · CÒN {Math.max(left,0)}/{VEN_MAX_QUESTIONS} CÂU HỎI</span></div>
+    <div className='eyebrow'>THẺ AI VÉN MÀN <span>CHƯƠNG {displayChapter} · CÒN {Math.max(left,0)}/{VEN_MAX_QUESTIONS} CÂU HỎI</span></div>
     <h1>Đừng nhận<br/><em>đáp án ngay.</em></h1>
-    <div className='chapter-picker'><span>CHƯƠNG ĐANG CHƠI</span>{chapters.map((c,i)=><button className={chapter===i+1?'selected':''} disabled={midRound} onClick={()=>{save({...session,chapter:i+1});reset()}} key={c}>Chương {i+1}<small>{c}</small></button>)}</div>
+    <div className='chapter-chip'>
+      <label htmlFor='ven-chapter'>CHƯƠNG ĐANG CHƠI</label>
+      <select id='ven-chapter' value={chapter} disabled={midRound} onChange={e=>{save({...session,chapter:Number(e.target.value)});reset()}}>
+        {chapters.map((c,i)=><option key={c} value={i+1}>{`Chương ${i+1} · ${c}`}</option>)}
+      </select>
+      {midRound&&<span className='chapter-locked-hint'>Kết thúc vòng để đổi chương</span>}
+    </div>
+    {restoredNotice&&round&&!revealed&&<p className='ven-notice ven-notice-info' role='status'>Đang tiếp tục vòng hỏi trước.</p>}
     {!round&&(left<=0?
-      <div className='locked-panel'><LockKeyhole/><h2>Đã dùng hết lượt hỏi</h2><p>Mỗi chương truyện chỉ được đặt tối đa {VEN_MAX_QUESTIONS} câu hỏi. Hãy chọn chương khác khi nhóm chơi sang chương mới.</p></div>
+      <div className='locked-panel'><LockKeyhole/><h2>Đã dùng hết lượt hỏi</h2><p>Đã dùng hết lượt hỏi của chương này. Hãy chọn chương khác khi nhóm chơi sang chương mới.</p></div>
     :
       <>
         <p className='lead'>Đặt một câu hỏi về cốt truyện, nhân vật hoặc chi tiết của chương này, hoặc về nghệ thuật chèo. AI sẽ không trả lời ngay mà đưa ra các bằng chứng để nhóm tự suy luận.</p>
-        <div className='ven-question'>
+        <div className='ven-question' aria-busy={loading}>
           <textarea value={question} maxLength={300} onChange={e=>setQuestion(e.target.value)} placeholder='Câu hỏi của nhóm...' disabled={loading}/>
           <span>{question.length}/300</span>
         </div>
-        {notice&&<p className='ven-notice' role='alert'>{notice}</p>}
-        <button className='primary' disabled={!question.trim()||loading} onClick={ask}>{loading?'AI đang suy nghĩ...':'Vén màn'} <Sparkles/></button>
+        {noticeType==='network'&&<p className='ven-notice ven-notice-danger' role='alert'>{notice} <button className='text-link' onClick={ask}>Thử lại</button></p>}
+        {noticeType==='refused'&&<p className='ven-notice ven-notice-warn'>{notice} <button className='text-link' onClick={clearRefusal}>Đặt lại câu hỏi</button></p>}
+        {loading&&slow&&<p className='ven-notice ven-notice-info' aria-live='polite'>AI cần thêm chút thời gian, xin đừng đóng trang.</p>}
+        <button className='primary' disabled={question.trim().length<2||loading} onClick={ask}>{loading?'AI đang suy nghĩ...':'Vén màn'} <Sparkles/></button>
       </>
     )}
     {round&&!revealed&&<>
@@ -162,13 +307,14 @@ function UpdatedVen({session,save,go}:{session:GameSession;save:(s:GameSession)=
         <p className='ven-hint'>AI chưa trả lời ngay. Hãy chọn đúng 2 bằng chứng giúp nhóm tìm ra câu trả lời ({picked.length}/2).</p>
         {round.evidences.map((e,i)=><button className={picked.includes(i)?'picked':''} aria-pressed={picked.includes(i)} key={i} onClick={()=>toggle(i)}><span>{picked.includes(i)?<Check/>:String.fromCharCode(65+i)}</span>{e.text}</button>)}
       </div>
-      <button className='primary' disabled={picked.length!==2} onClick={reveal}>Xem câu trả lời <ArrowRight/></button>
+      <div className='ven-sticky-bar'><button className='primary' disabled={picked.length!==2} onClick={reveal}>Xem câu trả lời <ArrowRight/></button></div>
     </>}
     {round&&revealed&&<div className='ven-result'>
       <strong>{win?'CHỌN ĐÚNG · +1 ĐIỂM HIỂU CHÈO':'CHƯA ĐÚNG · KHÔNG CÓ ĐIỂM HIỂU CHÈO'}</strong>
       <ul className='ven-review'>{round.evidences.map((e,i)=><li className={`${e.correct?'correct':'wrong'}${picked.includes(i)?' chosen':''}`} key={i}><span>{e.correct?'Bằng chứng đúng':'Gây nhiễu'}{picked.includes(i)?' · nhóm đã chọn':''}</span>{e.text}</li>)}</ul>
       <h2>Câu trả lời của AI Vén Màn</h2>
       <div className='ven-answer'><ReactMarkdown>{round.answer}</ReactMarkdown></div>
+      <small className='ven-disclaimer'>Nội dung do AI tạo, có thể chưa chính xác.</small>
       <div className='ven-actions'>
         {left>0&&<button className='primary' onClick={reset}>Đặt câu hỏi tiếp ({left} lượt còn lại)</button>}
         <button className='outline-light' onClick={()=>go('game')}>Về game hub</button>
@@ -333,7 +479,8 @@ function Rhythm({go,session,save}:{go:(p:Page)=>void;session:GameSession;save:(s
 
   const retry=()=>{setTaps([]);setResult(null);setNotice('');setPhase('your-turn')}
   const startPractice=()=>{setPractice(true);setTaps([]);setResult(null);setNotice('');setPhase('ready')}
-  const useIntervention=()=>save({...session,usedInterventions:[...session.usedInterventions,'i-02']})
+  const [confirmingIntervention,setConfirmingIntervention]=useState(false)
+  const useIntervention=()=>{save({...session,usedInterventions:[...session.usedInterventions,'i-02'],interventionLog:{...(session.interventionLog||{}),'i-02':{at:Date.now(),chapter:session.chapter}}});setConfirmingIntervention(false)}
 
   const maxAttempts=card?card.baseAttempts+(session.usedInterventions.includes('i-02')?1:0):0
   const attemptNumber=Math.min(session.rhythmAttempts+1,Math.max(maxAttempts,1))
@@ -383,9 +530,17 @@ function Rhythm({go,session,save}:{go:(p:Page)=>void;session:GameSession;save:(s
       {offerIntervention&&<div className='rhythm-intervention'>
         <b>Thẻ Can Thiệp: Giữ nhịp câu chuyện</b>
         <p>Thêm 1 lượt thử.</p>
-        <button className='outline' onClick={useIntervention}>Dùng thẻ</button>
+        <button className='outline' onClick={()=>setConfirmingIntervention(true)}>Dùng thẻ</button>
       </div>}
     </div>}
+    {confirmingIntervention&&<ConfirmDialog
+      title='Dùng thẻ "Giữ nhịp câu chuyện"?'
+      body='Thẻ chỉ dùng được 1 lần trong ván.'
+      confirmLabel='Dùng thẻ'
+      cancelLabel='Để sau'
+      onConfirm={useIntervention}
+      onCancel={()=>setConfirmingIntervention(false)}
+    />}
   </main>
 }
 function Guide({go}:{go:(p:Page)=>void}){return <main className="page guide-page"><div className="eyebrow">HƯỚNG DẪN CHƠI <span>ĐẶT BÀN · QUÉT THẺ · SUY LUẬN</span></div><h1>Chơi cùng nhau,<br/><em>nhìn khác đi.</em></h1><p className="lead">Trang web là người bạn đồng hành. Bàn chơi vật lý vẫn là nơi câu chuyện diễn ra.</p><div className="guide-steps">{[['01','Đặt bàn chơi','Chia vai Người Kể Tích, Người Soi Chứng và đặt các bộ thẻ trong tầm tay.'],['02','Mở Thẻ Tích Truyện','Đọc theo thứ tự. Khi gặp dấu OAN, cả nhóm dừng lại và không vội phán xét.'],['03','Nhập mã trên thẻ','Nhập mã 4 chữ số của Thẻ Góc Nhìn để đọc lời chứng của nhân vật.'],['04','Ghi nhớ lựa chọn','Dùng Thẻ Can Thiệp khi nhóm cần thêm một cơ hội. AI Vén Màn chỉ mở theo giới hạn của chương.']].map(s=><article key={s[0]}><span>{s[0]}</span><h2>{s[1]}</h2><p>{s[2]}</p></article>)}</div><button className="primary" onClick={()=>go('game')}>Mở game hub <ArrowRight/></button></main>}

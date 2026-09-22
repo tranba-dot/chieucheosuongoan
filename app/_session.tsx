@@ -14,6 +14,8 @@ export type GameSession = {
   rhythmBest: number
   rhythmUsed: boolean
   venAsked: Record<number, number>
+  lastPerspectiveEffect?: number
+  interventionLog?: Record<string, { at: number; chapter: number }>
 }
 
 export const blankSession: GameSession = {
