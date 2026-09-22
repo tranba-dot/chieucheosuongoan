@@ -196,3 +196,4 @@
 .about-credits h2{font:500 24px var(--font-display)}
 .about-credits ul{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
 .about-credits li{font-size:14px;color:var(--muted-foreground)}
+.storage-warning{position:relative;z-index:1;padding:12px 5vw;background:rgba(140,48,48,.18);border-bottom:1px solid var(--primary);color:var(--foreground);font-size:14px;text-align:center}
