@@ -10,8 +10,8 @@ const session = {
   events: [
     { t: 1, ch: 1, type: "perspective", oanId: "o", cardId: "p-01", effect: -1 },
     { t: 2, ch: 1, type: "perspective", oanId: "o", cardId: "p-02", effect: 1 },
-    { t: 3, ch: 1, type: "rhythm", code: "2714", pct: 82, awarded: 1, hieuDelta: 1 },
-    { t: 4, ch: 1, type: "rhythm", code: "2714", pct: 97, awarded: 2, hieuDelta: 1 }, // stacks 1 more, not the full tier-2 value
+    { t: 3, ch: 1, type: "rhythm", code: "2714" },
+    { t: 4, ch: 1, type: "rhythm", code: "2714" },
     { t: 5, ch: 2, type: "ven", win: true },
     { t: 6, ch: 2, type: "ven", win: false },
     { t: 7, ch: 1, type: "intervention", id: "i-01" },
@@ -21,9 +21,8 @@ const session = {
 const ch1 = chapterStats(session, 1)
 assert.strictEqual(ch1.oanDelta, 0, "ch1 oanDelta: -1 + 1 = 0")
 assert.strictEqual(ch1.testimonies, 2)
-assert.strictEqual(ch1.hieuDelta, 2, "ch1 hieuDelta: two rhythm attempts, 1+1 (no double-count of the tier)")
-assert.strictEqual(ch1.rhythmTried, true)
-assert.strictEqual(ch1.rhythmBestPct, 97)
+assert.strictEqual(ch1.hieuDelta, 2, "ch1 hieuDelta: two rhythm completions, +1 each")
+assert.strictEqual(ch1.rhythmCount, 2)
 assert.deepStrictEqual(ch1.interventionsUsed, ["i-01"])
 assert.strictEqual(ch1.venAsked, 2)
 
@@ -31,8 +30,7 @@ const ch2 = chapterStats(session, 2)
 assert.strictEqual(ch2.oanDelta, 0)
 assert.strictEqual(ch2.testimonies, 0)
 assert.strictEqual(ch2.hieuDelta, 1, "ch2 hieuDelta: one ven win, one ven loss (0)")
-assert.strictEqual(ch2.rhythmTried, false)
-assert.strictEqual(ch2.rhythmBestPct, null)
+assert.strictEqual(ch2.rhythmCount, 0)
 assert.deepStrictEqual(ch2.interventionsUsed, ["i-02"])
 assert.strictEqual(ch2.venAsked, 1)
 

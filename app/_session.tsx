@@ -10,10 +10,10 @@ export type GameEvent =
   | { t: number; ch: number; type: "perspective"; oanId: string; cardId: string; effect: -1 | 0 | 1 }
   | { t: number; ch: number; type: "intervention"; id: string }
   | { t: number; ch: number; type: "ven"; win: boolean }
-  // hieuDelta is the actual credit applied to session.hieu for THIS attempt (no stacking across
-  // retries) -- kept explicit rather than re-derived from `awarded`, since re-deriving would
-  // double-count a chapter where a later attempt raises the tier after an earlier one already scored.
-  | { t: number; ch: number; type: "rhythm"; code: string; pct: number; awarded: 0 | 1 | 2; hieuDelta: number }
+  // No score fields: the site only plays the card's audio, it doesn't judge the clap (project
+  // owner's brief, 2026-09-23). Completing a card is a flat +1 Hiểu Chèo, so there's nothing
+  // to derive per-attempt -- unlike the old tap-scoring model this replaced.
+  | { t: number; ch: number; type: "rhythm"; code: string }
 
 export type GameSession = {
   chapter: number

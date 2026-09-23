@@ -6,8 +6,7 @@ export type ChapterStats = {
   testimonies: number
   venAsked: number
   interventionsUsed: string[]
-  rhythmTried: boolean
-  rhythmBestPct: number | null
+  rhythmCount: number
 }
 
 // Filters the chapter-scoped events[] log (see app/_session.tsx) down to one chapter's
@@ -17,8 +16,7 @@ export function chapterStats(session: GameSession, chapter: number): ChapterStat
   let oanDelta = 0
   let hieuDelta = 0
   let testimonies = 0
-  let rhythmTried = false
-  let rhythmBestPct: number | null = null
+  let rhythmCount = 0
   for (const ev of events) {
     if (ev.ch !== chapter) continue
     if (ev.type === "perspective") {
@@ -27,13 +25,12 @@ export function chapterStats(session: GameSession, chapter: number): ChapterStat
     } else if (ev.type === "ven") {
       if (ev.win) hieuDelta += 1
     } else if (ev.type === "rhythm") {
-      hieuDelta += ev.hieuDelta
-      rhythmTried = true
-      rhythmBestPct = rhythmBestPct === null ? ev.pct : Math.max(rhythmBestPct, ev.pct)
+      hieuDelta += 1
+      rhythmCount++
     }
   }
   const interventionsUsed = Object.entries(session.interventionLog || {})
     .filter(([, v]) => v.chapter === chapter)
     .map(([id]) => id)
-  return { oanDelta, hieuDelta, testimonies, venAsked: session.venAsked[chapter] || 0, interventionsUsed, rhythmTried, rhythmBestPct }
+  return { oanDelta, hieuDelta, testimonies, venAsked: session.venAsked[chapter] || 0, interventionsUsed, rhythmCount }
 }
