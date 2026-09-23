@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Search, Menu, X, ArrowRight, BookOpen, Sparkles, ChevronRight, Check, LockKeyhole, Eye, TriangleAlert, Volume2, VolumeX } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import { CHAPTERS as chapters } from "@/lib/chapters"
-import { useGameSession, logEvent, blankSession, type GameSession } from "./_session"
+import { useGameSession, logEvent, blankSession, type GameSession, type GameEvent } from "./_session"
 import { chapterStats } from "@/lib/chapterStats"
 import { chapters as chapterData } from "@/data/chapters"
 import { findRhythmCard, scoreRhythm, rhythmAwarded, type RhythmResult, type BeatLabel } from "@/lib/rhythm"
@@ -31,7 +31,7 @@ const perspectiveCards:Perspective[]=[{id:'p-01',code:'1842',name:'Bác Độ',r
 const perspectiveEvidence:PerspectiveEvidence[]=[{cardId:'p-01',oanId:'oan-01',text:'Bác Độ nhớ tiếng trống vang lần đầu trước khi mọi người chạy về phía giếng. Trình tự này không khớp với lời đồn.',effect:-1},{cardId:'p-02',oanId:'oan-01',text:'Cô Mận nghe một câu nói ngắt quãng, nhưng không nhìn thấy người nói. Thông tin gợi mở nhưng chưa đủ.',effect:0},{cardId:'p-03',oanId:'oan-01',text:'Anh Sửu thấy một dải vải ở sân, nhưng không biết nó thuộc về ai hay xuất hiện lúc nào.',effect:1}];
 const interventionCards:Intervention[]=[{id:'i-01',name:'Xin thêm một lời chứng',description:'Mở thêm một cơ hội xem Thẻ Góc Nhìn sau kết quả chưa đủ.',condition:'Sau kết quả chưa đủ hoặc chưa giúp làm rõ.',timing:'Ngay sau điều tra Góc Nhìn',effect:'Cho phép nhập thêm một mã Góc Nhìn trong cùng Oan.'},{id:'i-02',name:'Giữ nhịp câu chuyện',description:'Bảo toàn một cơ hội thử Nhịp–Phách sau lần thất bại đầu tiên.',condition:'Sau lần thử đầu tiên dưới 80%.',timing:'Ngay sau lần thử Nhịp–Phách',effect:'Bảo toàn cơ hội tiếp theo.'}];
 const pageToPath:Partial<Record<Page,string>>={home:'/',qa:'/hoi-dap',game:'/game',story:'/tich-truyen',oan:'/kiem-chung',perspective:'/goc-nhin',intervention:'/can-thiep',ven:'/ai-ven-man',rhythm:'/nhip-phach',guide:'/huong-dan',about:'/gioi-thieu',journey:'/hanh-trinh',tongket:'/game/tong-ket'};
-function AppShell({initialPage='home'}:{initialPage?:Page}){const router=useRouter();const {session,save,storageError,loading}=useGameSession();const [page,setPage]=useState<Page>(initialPage),[menu,setMenu]=useState(false);const go=(p:Page)=>{setPage(p);setMenu(false);window.scrollTo({top:0,behavior:'smooth'});const path=pageToPath[p];if(path)router.push(path)};useEffect(()=>{if(!menu)return;const esc=(e:KeyboardEvent)=>{if(e.key==='Escape')setMenu(false)};window.addEventListener('keydown',esc);return()=>window.removeEventListener('keydown',esc)},[menu]);const navItems:[Page,string][]=[['home','TRANG CHỦ'],['qa','AI HỎI ĐÁP'],['game','TRÒ CHƠI'],['about','VỀ DỰ ÁN']];return <><header className='topbar'><button className='brand' onClick={()=>go('home')}><span>CHIẾU CHÈO</span><b>SƯƠNG OAN</b></button><nav>{navItems.map(([p,l])=><button key={p} onClick={()=>go(p)}>{l}</button>)}</nav><button className='menu-button' aria-label={menu?'Đóng menu':'Mở menu'} aria-expanded={menu} aria-controls='mobile-menu' onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button><div id='mobile-menu' className='mobile-menu' hidden={!menu}>{navItems.map(([p,l])=><button key={p} onClick={()=>go(p)}>{l}</button>)}</div></header>{storageError&&<div className='storage-warning' role='status'>Không lưu được ván trên máy này. Ván sẽ mất khi tải lại trang.</div>}{page==='home'&&<Home go={go}/>} {page==='qa'&&<QA/>} {page==='game'&&<UpdatedGame go={go} session={session} save={save} loading={loading}/>} {page==='story'&&<UpdatedStory card={storyCards.find(x=>x.id===session.storyId)||storyCards[0]} go={go}/>} {page==='oan'&&<UpdatedOan go={go}/>} {page==='perspective'&&<Suspense fallback={null}><UpdatedPerspective go={go} session={session} save={save}/></Suspense>} {page==='intervention'&&<Suspense fallback={null}><UpdatedIntervention session={session} save={save} go={go}/></Suspense>} {page==='ven'&&<UpdatedVen session={session} save={save} go={go}/>} {page==='rhythm'&&<Rhythm go={go} session={session} save={save}/>} {page==='journey'&&<Suspense fallback={null}><Journey go={go}/></Suspense>} {page==='about'&&<About/>}{page==='guide'&&<Guide go={go}/>}{page==='tongket'&&<TongKet session={session} save={save} go={go}/>}<Footer go={go}/></>}
+function AppShell({initialPage='home'}:{initialPage?:Page}){const router=useRouter();const {session,save,storageError,loading}=useGameSession();const [page,setPage]=useState<Page>(initialPage),[menu,setMenu]=useState(false);const go=(p:Page)=>{setPage(p);setMenu(false);window.scrollTo({top:0,behavior:'smooth'});const path=pageToPath[p];if(path)router.push(path)};useEffect(()=>{if(!menu)return;const esc=(e:KeyboardEvent)=>{if(e.key==='Escape')setMenu(false)};window.addEventListener('keydown',esc);return()=>window.removeEventListener('keydown',esc)},[menu]);const navItems:[Page,string][]=[['home','TRANG CHỦ'],['qa','AI HỎI ĐÁP'],['game','TRÒ CHƠI'],['about','VỀ DỰ ÁN']];return <><header className='topbar'><button className='brand' onClick={()=>go('home')}><span>CHIẾU CHÈO</span><b>SƯƠNG OAN</b></button><nav>{navItems.map(([p,l])=><button key={p} onClick={()=>go(p)}>{l}</button>)}</nav><button className='menu-button' aria-label={menu?'Đóng menu':'Mở menu'} aria-expanded={menu} aria-controls='mobile-menu' onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button><div id='mobile-menu' className='mobile-menu' hidden={!menu}>{navItems.map(([p,l])=><button key={p} onClick={()=>go(p)}>{l}</button>)}</div></header>{storageError&&<div className='storage-warning' role='status'>Không lưu được ván trên máy này. Ván sẽ mất khi tải lại trang.</div>}{page==='home'&&<Home go={go}/>} {page==='qa'&&<QA/>} {page==='game'&&<UpdatedGame go={go} session={session} save={save} loading={loading}/>} {page==='story'&&<UpdatedStory card={storyCards.find(x=>x.id===session.storyId)||storyCards[0]} go={go}/>} {page==='oan'&&<UpdatedOan go={go} session={session}/>} {page==='perspective'&&<Suspense fallback={null}><UpdatedPerspective go={go} session={session} save={save} loading={loading}/></Suspense>} {page==='intervention'&&<Suspense fallback={null}><UpdatedIntervention session={session} save={save} go={go}/></Suspense>} {page==='ven'&&<UpdatedVen session={session} save={save} go={go}/>} {page==='rhythm'&&<Rhythm go={go} session={session} save={save}/>} {page==='journey'&&<Suspense fallback={null}><Journey go={go}/></Suspense>} {page==='about'&&<About/>}{page==='guide'&&<Guide go={go}/>}{page==='tongket'&&<TongKet session={session} save={save} go={go}/>}<Footer go={go}/></>}
 function Footer({go}:{go:(p:Page)=>void}){return <footer className='site-footer'><div className='footer-brand'>CHIẾU CHÈO SƯƠNG OAN</div><p className='footer-tagline'>Một không gian học tập về nghệ thuật truyền thống Việt Nam.</p><nav className='footer-links'><button onClick={()=>go('guide')}>Hướng dẫn</button><button onClick={()=>go('about')}>Về dự án</button><a href='/gioi-thieu#nguon-ghi-nhan'>Nguồn & ghi nhận</a></nav><div className='footer-disclaimers'><p>Nội dung do AI tạo có thể chưa chính xác; hãy đối chiếu nguồn.</p><p>Hình minh họa mang tính giáo dục, không phải tư liệu lưu trữ.</p><p>© [Nội dung cần bổ sung: đơn vị thực hiện / năm / giấy phép]</p></div></footer>}
 function UpdatedGame({go,session,save,loading}:{go:(p:Page)=>void;session:GameSession;save:(s:GameSession)=>void;loading:boolean}){
   const [startChapter,setStartChapter]=useState(1)
@@ -172,9 +172,30 @@ function TongKet({session,save,go}:{session:GameSession;save:(s:GameSession)=>vo
   </main>
 }
 function UpdatedStory({card,go}:{card:StoryCard;go:(p:Page)=>void}){return <main className='page story-page'><div className='eyebrow'>THẺ TÍCH TRUYỆN · CHƯƠNG {card.chapter}<span>{card.type==='oan'?'● CÓ TÌNH HUỐNG OAN':'THẺ THƯỜNG'}</span></div><div className={card.type==='oan'?'story-card oan-mark':'story-card'}><span className='story-symbol'>{card.type==='oan'?'O':'T'}</span><h1>{card.title}</h1><p>{card.content}</p>{card.type==='oan'&&<div className='oan-notice'><b>OAN</b><span>Thẻ này mở hệ thống điều tra Góc Nhìn.</span></div>}</div><button className='primary' onClick={()=>card.type==='oan'?go('oan'):go('game')}>{card.type==='oan'?'Mở tình huống Oan':'Tiếp tục câu chuyện'} <ArrowRight/></button><button className='text-link' onClick={()=>go('ven')}>Thẻ AI Vén Màn <Sparkles/></button></main>}
-function UpdatedOan({go}:{go:(p:Page)=>void}){return <main className='page oan-page'><button className='back' onClick={()=>go('story')}>← Về Thẻ Tích Truyện</button><div className='oan-card'><div className='eyebrow'>TÌNH HUỐNG OAN · OAN-01</div><h1>Lời truyền<br/><em>ngoài sân.</em></h1><p className='story'>Một lời truyền miệng khiến nhân vật bị nhìn bằng ánh mắt khác. Hãy đọc tình huống trước khi chọn một Thẻ Góc Nhìn.</p><p className='question'>Bạn muốn nhìn sự việc từ góc nhìn của ai?</p><button className='primary' onClick={()=>go('perspective')}>Chọn Thẻ Góc Nhìn <Eye/></button><button className='outline' onClick={()=>go('intervention')}>Xem Thẻ Can Thiệp</button></div></main>}
+function effectShortLabel(effect:number){return effect<0?'Giúp làm rõ một phần':effect===0?'Chưa đủ để xác định':'Chưa giúp làm rõ'}
+function UpdatedOan({go,session}:{go:(p:Page)=>void;session:GameSession}){
+  const opened=session.events.filter((e):e is Extract<GameEvent,{type:'perspective'}>=>e.type==='perspective'&&e.oanId===session.oanId)
+  const full=opened.length>=perspectiveCards.length
+  return <main className='page oan-page'>
+    <button className='back' onClick={()=>go('story')}>← Về Thẻ Tích Truyện</button>
+    <div className='oan-card'>
+      <div className='eyebrow'>TÌNH HUỐNG OAN · OAN-01</div>
+      <h1>Lời truyền<br/><em>ngoài sân.</em></h1>
+      <p className='story'>Một lời truyền miệng khiến nhân vật bị nhìn bằng ánh mắt khác. Hãy đọc tình huống trước khi chọn một Thẻ Góc Nhìn.</p>
+      <p className='question'>Bạn muốn nhìn sự việc từ góc nhìn của ai?</p>
+      {full?<p className='hub-note'>Đã mở hết Góc Nhìn hiện có.</p>:<button className='primary' onClick={()=>go('perspective')}>Chọn Thẻ Góc Nhìn <Eye/></button>}
+      <button className='outline' onClick={()=>go('intervention')}>Xem Thẻ Can Thiệp</button>
+    </div>
+    {opened.length>0&&<div className='hub-panel'>
+      <b>LỜI CHỨNG ĐÃ MỞ ({opened.length}/{perspectiveCards.length})</b>
+      <div className='card-rows'>
+        {opened.map(e=>{const card=perspectiveCards.find(c=>c.id===e.cardId);return card&&<a key={e.cardId} className='card-row' href={`/goc-nhin?ma=${card.code}`}><b>{card.name} · {card.role}</b><span>{effectShortLabel(e.effect)}</span></a>})}
+      </div>
+    </div>}
+  </main>
+}
 type PerspectiveError='none'|'too-short'|'not-found'|'wrong-oan'
-function UpdatedPerspective({go,session,save}:{go:(p:Page)=>void;session:GameSession;save:(s:GameSession)=>void}){
+function UpdatedPerspective({go,session,save,loading}:{go:(p:Page)=>void;session:GameSession;save:(s:GameSession)=>void;loading:boolean}){
   const searchParams=useSearchParams()
   const [code,setCode]=useState('')
   const [tried,setTried]=useState(false)
@@ -201,11 +222,15 @@ function UpdatedPerspective({go,session,save}:{go:(p:Page)=>void;session:GameSes
   },[result])
 
   // Deep link (spec 3.5): a QR-scanned ?ma= is a clear intent to view, so auto-open on load.
+  // Waits for the session's own localStorage read (loading) to finish first -- firing earlier
+  // raced the SessionProvider mount and could save() over a blank in-memory session, silently
+  // wiping any previously-recorded oan/events on a real reload (caught via live testing, not code review).
   useEffect(()=>{
+    if(loading)return
     const ma=searchParams.get('ma')?.replace(/\D/g,'').slice(0,4)
     if(ma){setCode(ma);if(ma.length===4)lookup(ma)}
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[])
+  },[loading])
 
   const reset=()=>{setCode('');setResult(null);setErrorType('none');setTried(false);inputRef.current?.focus();window.scrollTo({top:0,behavior:'smooth'})}
 
