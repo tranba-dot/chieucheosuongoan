@@ -248,4 +248,30 @@
 .about-credits h2{font:500 24px var(--font-display)}
 .about-credits ul{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
 .about-credits li{font-size:14px;color:var(--muted-foreground)}
+
+/* Game hub v2 + Tổng kết chương (Đợt 4: L3 vòng đời ván, L9 hub, 5.11) */
+.hub-stack{display:flex;flex-direction:column;gap:16px;margin-top:32px}
+.hub-panel{border:1px solid var(--border);padding:24px;background:rgba(22,24,51,.72);display:flex;flex-direction:column;gap:16px}
+.hub-panel>b,.hub-panel .panel-title{font-size:12px;letter-spacing:.12em;color:var(--accent);text-transform:uppercase}
+.hub-run-status{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font-size:14px;color:var(--muted-foreground)}
+.hub-note{margin:0;font-size:14px;color:var(--muted-foreground)}
+.card-rows{display:flex;flex-direction:column;gap:1px;background:var(--border)}
+.card-row{display:flex;flex-direction:column;justify-content:center;gap:4px;min-height:64px;padding:12px 16px;background:#1b1f42;color:inherit;text-align:left;border:0}
+.card-row b{font-size:16px;font-weight:500}
+.card-row span{font-size:14px;color:var(--muted-foreground)}
+.card-row:hover{background:rgba(197,165,107,.1)}
+.hub-manage{display:flex;flex-direction:column;gap:12px}
+.hub-manage button{width:100%;justify-content:center}
+.hub-empty select,.hub-start select{min-height:48px;padding:0 14px;background:var(--card);border:1px solid var(--border);color:var(--foreground);font-size:14px}
+.hub-empty label{font-size:12px;letter-spacing:.12em;color:var(--accent)}
+.hub-skeleton{display:flex;flex-direction:column;gap:12px}
+.hub-skeleton .bar{height:16px;background:rgba(255,255,255,.08)}
+.hub-skeleton .bar.short{width:40%}
+@media(prefers-reduced-motion:no-preference){.hub-skeleton .bar{background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(255,255,255,.16),rgba(255,255,255,.06));background-size:200% 100%;animation:hub-shimmer 1.4s infinite}}
+@keyframes hub-shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.tongket-stats{display:flex;flex-direction:column;gap:10px}
+.tongket-stats div{display:flex;justify-content:space-between;gap:12px;font-size:16px}
+.tongket-stats b{font-weight:400;color:var(--muted-foreground)}
+.tongket-stats span{font-weight:500}
+.tongket-page .hub-panel{max-width:560px}
 .storage-warning{position:relative;z-index:1;padding:12px 5vw;background:rgba(140,48,48,.18);border-bottom:1px solid var(--primary);color:var(--foreground);font-size:14px;text-align:center}
