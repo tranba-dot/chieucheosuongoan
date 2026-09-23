@@ -1,12 +1,16 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Search, Menu, X, ArrowRight, BookOpen, Sparkles, ChevronRight, Check, LockKeyhole, Eye } from "lucide-react"
+import { Suspense, useEffect, useMemo, useRef, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Search, Menu, X, ArrowRight, BookOpen, Sparkles, ChevronRight, Check, LockKeyhole, Eye, TriangleAlert } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import { CHAPTERS as chapters } from "@/lib/chapters"
+import { useGameSession, logEvent, blankSession, type GameSession, type GameEvent } from "./_session"
+import { chapterStats } from "@/lib/chapterStats"
+import { chapters as chapterData } from "@/data/chapters"
+import { findRhythmCard } from "@/lib/rhythm"
 
-type Page = "home" | "qa" | "game" | "story" | "oan" | "perspective" | "intervention" | "ven" | "rhythm" | "journey" | "about" | "guide"
+type Page = "home" | "qa" | "game" | "story" | "oan" | "perspective" | "intervention" | "ven" | "rhythm" | "journey" | "about" | "guide" | "tongket"
 type Art = { id:string; name:string; region:string; category:string; period:string; summary:string; image:string; tags:string[]; concepts:string[]; instruments:string[]; works:string[]; source:string }
 const arts:Art[]=[
 {id:"cheo",name:"Chèo",region:"Bắc Bộ",category:"Sân khấu",period:"Thế kỷ XVI",summary:"Sân khấu dân gian giàu chất trữ tình, tiếng cười và lối diễn ước lệ.",image:"/images/cheo-theatre.png",tags:["sân khấu","dân gian","ước lệ"],concepts:["vai diễn ước lệ","làn điệu","chiếu chèo"],instruments:["trống cơm","nhị","đàn đáy"],works:["Quan Âm Thị Kính","Lưu Bình – Dương Lễ"],source:"Tư liệu giáo dục văn hóa dân gian Việt Nam"},
@@ -22,72 +26,443 @@ const arts:Art[]=[
 {id:"danbau",name:"Đàn bầu",region:"Việt Nam",category:"Nhạc cụ",period:"Truyền thống",summary:"Nhạc cụ một dây có âm sắc giàu biểu cảm, gắn với nhiều thể loại âm nhạc Việt.",image:"/images/heritage-gallery-2.png",tags:["nhạc cụ","một dây","âm sắc"],concepts:["bồi âm","cần đàn","hộp đàn"],instruments:["đàn bầu"],works:["Độc tấu đàn bầu"],source:"Tư liệu nhạc cụ truyền thống Việt Nam"},
 ]
 const filters=["Tất cả","Sân khấu","Âm nhạc","Trình diễn","Nhạc cụ"]
-type StoryCard={id:string;chapter:number;sequence:number;title:string;content:string;type:'normal'|'oan';oanCaseId?:string};type Perspective={id:string;code:string;name:string;role:string;traits:string[];scope:string;blindSpot:string};type PerspectiveEvidence={cardId:string;oanId:string;text:string;effect:-1|0|1};type Intervention={id:string;name:string;description:string;condition:string;timing:string;effect:string};type GameSession={chapter:number;storyId:string;oanId:string;oan:number;hieu:number;usedPerspectives:string[];usedInterventions:string[];rhythmAttempts:number;rhythmBest:number;rhythmUsed:boolean;venAsked:Record<number,number>};
-const storyCards:StoryCard[]=[{id:'story-01',chapter:1,sequence:1,title:'Tiếng trống đầu làng',content:'Một tiếng trống mở hội vang lên. Người Kể Tích giới thiệu làng quê và những quy ước đầu tiên.',type:'normal'},{id:'story-02',chapter:1,sequence:2,title:'Lời truyền bên giếng',content:'Một lời kể truyền qua nhiều người. Có điều gì đó chưa được nhìn đủ từ mọi phía.',type:'oan',oanCaseId:'oan-01'}];
+type StoryCard={id:string;chapter:number;sequence:number;title:string;content:string;type:'normal'|'oan';oanCaseId?:string};type Perspective={id:string;code:string;name:string;role:string;traits:string[];scope:string;blindSpot:string};type PerspectiveEvidence={cardId:string;oanId:string;text:string;effect:-1|0|1};type Intervention={id:string;name:string;description:string;condition:string;timing:string;effect:string};const storyCards:StoryCard[]=[{id:'story-01',chapter:1,sequence:1,title:'Tiếng trống đầu làng',content:'Một tiếng trống mở hội vang lên. Người Kể Tích giới thiệu làng quê và những quy ước đầu tiên.',type:'normal'},{id:'story-02',chapter:1,sequence:2,title:'Lời truyền bên giếng',content:'Một lời kể truyền qua nhiều người. Có điều gì đó chưa được nhìn đủ từ mọi phía.',type:'oan',oanCaseId:'oan-01'}];
 const perspectiveCards:Perspective[]=[{id:'p-01',code:'1842',name:'Bác Độ',role:'Người giữ trống làng',traits:['để ý âm thanh','nhớ trình tự'],scope:'Biết thời điểm trống vang và ai có mặt gần đình.',blindSpot:'Không nghe được những lời nói ở cuối sân đình.'},{id:'p-02',code:'5931',name:'Cô Mận',role:'Người bán hàng bên giếng',traits:['quan sát kỹ','hay suy đoán'],scope:'Biết những người đi qua giếng và lời họ nói.',blindSpot:'Không chứng kiến sự việc trong đình.'},{id:'p-03',code:'7264',name:'Anh Sửu',role:'Người dọn sân hội',traits:['thực tế','ít nói'],scope:'Biết dấu vết và đồ vật còn lại sau buổi hội.',blindSpot:'Không biết câu chuyện bắt đầu từ đâu.'}];
 const perspectiveEvidence:PerspectiveEvidence[]=[{cardId:'p-01',oanId:'oan-01',text:'Bác Độ nhớ tiếng trống vang lần đầu trước khi mọi người chạy về phía giếng. Trình tự này không khớp với lời đồn.',effect:-1},{cardId:'p-02',oanId:'oan-01',text:'Cô Mận nghe một câu nói ngắt quãng, nhưng không nhìn thấy người nói. Thông tin gợi mở nhưng chưa đủ.',effect:0},{cardId:'p-03',oanId:'oan-01',text:'Anh Sửu thấy một dải vải ở sân, nhưng không biết nó thuộc về ai hay xuất hiện lúc nào.',effect:1}];
 const interventionCards:Intervention[]=[{id:'i-01',name:'Xin thêm một lời chứng',description:'Mở thêm một cơ hội xem Thẻ Góc Nhìn sau kết quả chưa đủ.',condition:'Sau kết quả chưa đủ hoặc chưa giúp làm rõ.',timing:'Ngay sau điều tra Góc Nhìn',effect:'Cho phép nhập thêm một mã Góc Nhìn trong cùng Oan.'},{id:'i-02',name:'Giữ nhịp câu chuyện',description:'Bảo toàn một cơ hội thử Nhịp–Phách sau lần thất bại đầu tiên.',condition:'Sau lần thử đầu tiên dưới 80%.',timing:'Ngay sau lần thử Nhịp–Phách',effect:'Bảo toàn cơ hội tiếp theo.'}];
-const blankSession:GameSession={chapter:1,storyId:'story-01',oanId:'oan-01',oan:0,hieu:0,usedPerspectives:[],usedInterventions:[],rhythmAttempts:0,rhythmBest:0,rhythmUsed:false,venAsked:{}};
-const pageToPath:Partial<Record<Page,string>>={home:'/',game:'/game',oan:'/kiem-chung',perspective:'/goc-nhin',ven:'/ai-ven-man',guide:'/huong-dan',about:'/gioi-thieu',journey:'/hanh-trinh'};
-function AppShell({initialPage='home'}:{initialPage?:Page}){const router=useRouter();const [page,setPage]=useState<Page>(initialPage),[menu,setMenu]=useState(false),[session,setSession]=useState<GameSession>(blankSession),[code,setCode]=useState(''),[perspective,setPerspective]=useState<Perspective|null>(null),[testimony,setTestimony]=useState<PerspectiveEvidence|null>(null),[intervention,setIntervention]=useState('');useEffect(()=>{try{const x=localStorage.getItem('ccts-game-session');if(x)setSession({...blankSession,...JSON.parse(x)})}catch{}},[]);const save=(next:GameSession)=>{setSession(next);localStorage.setItem('ccts-game-session',JSON.stringify(next))};const go=(p:Page)=>{setPage(p);setMenu(false);window.scrollTo({top:0,behavior:'smooth'});const path=pageToPath[p];if(path)router.push(path)};const inspect=()=>{const card=perspectiveCards.find(x=>x.code===code);const ev=card&&perspectiveEvidence.find(x=>x.cardId===card.id&&x.oanId===session.oanId);if(!card||!ev){setPerspective(null);setTestimony(null);return}setPerspective(card);setTestimony(ev);if(!session.usedPerspectives.includes(card.id+session.oanId))save({...session,usedPerspectives:[...session.usedPerspectives,card.id+session.oanId],oan:session.oan+ev.effect})};useEffect(()=>{if(!menu)return;const esc=(e:KeyboardEvent)=>{if(e.key==='Escape')setMenu(false)};window.addEventListener('keydown',esc);return()=>window.removeEventListener('keydown',esc)},[menu]);const navItems:[Page,string][]=[['home','TRANG CHỦ'],['qa','AI HỎI ĐÁP'],['game','CHIẾU CHÈO SƯƠNG OAN'],['about','VỀ DỰ ÁN']];return <><header className='topbar'><button className='brand' onClick={()=>go('home')}><span>CHIẾU CHÈO</span><b>SƯƠNG OAN</b></button><nav>{navItems.map(([p,l])=><button key={p} onClick={()=>go(p)}>{l}</button>)}</nav><button className='menu-button' aria-label={menu?'Đóng menu':'Mở menu'} aria-expanded={menu} aria-controls='mobile-menu' onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button><div id='mobile-menu' className='mobile-menu' hidden={!menu}>{navItems.map(([p,l])=><button key={p} onClick={()=>go(p)}>{l}</button>)}</div></header>{page==='home'&&<Home go={go}/>} {page==='qa'&&<QA/>} {page==='game'&&<UpdatedGame go={go} session={session}/>} {page==='story'&&<UpdatedStory card={storyCards.find(x=>x.id===session.storyId)||storyCards[0]} go={go}/>} {page==='oan'&&<UpdatedOan go={go}/>} {page==='perspective'&&<UpdatedPerspective go={go} code={code} setCode={setCode} inspect={inspect} perspective={perspective} testimony={testimony}/>} {page==='intervention'&&<UpdatedIntervention session={session} save={save}/>} {page==='ven'&&<UpdatedVen session={session} save={save} go={go}/>} {page==='rhythm'&&<Rhythm go={go}/>} {page==='journey'&&<Journey go={go}/>} {page==='about'&&<About/>}{page==='guide'&&<Guide go={go}/>}</>}
-function UpdatedGame({go,session}:{go:(p:Page)=>void;session:GameSession}){return <main className='page game-page'><div className='eyebrow'>CHIẾU CHÈO SƯƠNG OAN <span>COMPANION CHO BỘ GAME VẬT LÝ</span></div><h1>Một câu chuyện<br/><em>nhiều góc nhìn.</em></h1><p className='lead'>Website không thay thế bàn chơi. Nó mở đúng thông tin cho từng thẻ và từng vai trò.</p><div className='game-stats'><div><b>{session.oan}</b><span>ĐIỂM OAN</span></div><div><b>{session.hieu}</b><span>HIỂU CHÈO</span></div><div><b>{session.usedPerspectives.length}</b><span>LỜI CHỨNG</span></div></div><div className='game-grid'><div className='game-panel'><span className='eyebrow'>NGƯỜI KỂ TÍCH</span><h2>Thẻ Tích Truyện</h2><p>Thẻ thường hoặc Thẻ Tích Truyện có dấu Oan. Thẻ Oan không phải một bộ bài riêng.</p><button className='primary' onClick={()=>go('story')}>Mở thẻ hiện tại <ArrowRight/></button></div><div className='game-panel dark'><span className='eyebrow'>NGƯỜI SOI CHỨNG</span><h2>Góc Nhìn</h2><p>Chọn một nhân vật phụ làm nguồn thông tin. Lá bài chỉ cung cấp bằng chứng.</p><button className='outline-light' onClick={()=>go('oan')}>Mở tình huống Oan <Eye/></button></div></div><div className='card-system'><b>THẺ TRONG BỘ GAME</b><p>Thẻ Tích Truyện · Thẻ Góc Nhìn · Thẻ Can Thiệp · Thẻ Nhịp–Phách · Thẻ AI Vén Màn</p><button className='text-link' onClick={()=>go('intervention')}>Xem Thẻ Can Thiệp <ArrowRight/></button></div></main>}
+const pageToPath:Partial<Record<Page,string>>={home:'/',qa:'/hoi-dap',game:'/game',story:'/tich-truyen',oan:'/kiem-chung',perspective:'/goc-nhin',intervention:'/can-thiep',ven:'/ai-ven-man',rhythm:'/nhip-phach',guide:'/huong-dan',about:'/gioi-thieu',journey:'/hanh-trinh',tongket:'/game/tong-ket'};
+function AppShell({initialPage='home'}:{initialPage?:Page}){const router=useRouter();const {session,save,storageError,loading}=useGameSession();const [page,setPage]=useState<Page>(initialPage),[menu,setMenu]=useState(false);const go=(p:Page)=>{setPage(p);setMenu(false);window.scrollTo({top:0,behavior:'smooth'});const path=pageToPath[p];if(path)router.push(path)};useEffect(()=>{if(!menu)return;const esc=(e:KeyboardEvent)=>{if(e.key==='Escape')setMenu(false)};window.addEventListener('keydown',esc);return()=>window.removeEventListener('keydown',esc)},[menu]);const navItems:[Page,string][]=[['home','TRANG CHỦ'],['qa','AI HỎI ĐÁP'],['game','TRÒ CHƠI'],['about','VỀ DỰ ÁN']];return <><header className='topbar'><button className='brand' onClick={()=>go('home')}><span>CHIẾU CHÈO</span><b>SƯƠNG OAN</b></button><nav>{navItems.map(([p,l])=><button key={p} onClick={()=>go(p)}>{l}</button>)}</nav><button className='menu-button' aria-label={menu?'Đóng menu':'Mở menu'} aria-expanded={menu} aria-controls='mobile-menu' onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button><div id='mobile-menu' className='mobile-menu' hidden={!menu}>{navItems.map(([p,l])=><button key={p} onClick={()=>go(p)}>{l}</button>)}</div></header>{storageError&&<div className='storage-warning' role='status'>Không lưu được ván trên máy này. Ván sẽ mất khi tải lại trang.</div>}{page==='home'&&<Home go={go}/>} {page==='qa'&&<QA/>} {page==='game'&&<UpdatedGame go={go} session={session} save={save} loading={loading}/>} {page==='story'&&<UpdatedStory card={storyCards.find(x=>x.id===session.storyId)||storyCards[0]} go={go}/>} {page==='oan'&&<UpdatedOan go={go} session={session}/>} {page==='perspective'&&<Suspense fallback={null}><UpdatedPerspective go={go} session={session} save={save} loading={loading}/></Suspense>} {page==='intervention'&&<Suspense fallback={null}><UpdatedIntervention session={session} save={save} go={go}/></Suspense>} {page==='ven'&&<UpdatedVen session={session} save={save} go={go}/>} {page==='rhythm'&&<Suspense fallback={null}><Rhythm go={go} session={session} save={save}/></Suspense>} {page==='journey'&&<Suspense fallback={null}><Journey go={go}/></Suspense>} {page==='about'&&<About/>}{page==='guide'&&<Guide go={go}/>}{page==='tongket'&&<TongKet session={session} save={save} go={go}/>}<Footer go={go}/></>}
+function Footer({go}:{go:(p:Page)=>void}){return <footer className='site-footer'><div className='footer-brand'>CHIẾU CHÈO SƯƠNG OAN</div><p className='footer-tagline'>Một không gian học tập về nghệ thuật truyền thống Việt Nam.</p><nav className='footer-links'><button onClick={()=>go('guide')}>Hướng dẫn</button><button onClick={()=>go('about')}>Về dự án</button><a href='/gioi-thieu#nguon-ghi-nhan'>Nguồn & ghi nhận</a></nav><div className='footer-disclaimers'><p>Nội dung do AI tạo có thể chưa chính xác; hãy đối chiếu nguồn.</p><p>Hình minh họa mang tính giáo dục, không phải tư liệu lưu trữ.</p><p>© [Nội dung cần bổ sung: đơn vị thực hiện / năm / giấy phép]</p></div></footer>}
+function UpdatedGame({go,session,save,loading}:{go:(p:Page)=>void;session:GameSession;save:(s:GameSession)=>void;loading:boolean}){
+  const [startChapter,setStartChapter]=useState(1)
+  const [confirmingReset,setConfirmingReset]=useState(false)
+  const [resetToast,setResetToast]=useState(false)
+
+  const begin=()=>save({...blankSession,chapter:startChapter,startedAt:Date.now()})
+  const doReset=()=>{
+    save(blankSession)
+    try{sessionStorage.removeItem(VEN_ROUND_KEY)}catch{}
+    setConfirmingReset(false)
+    setResetToast(true)
+    setTimeout(()=>setResetToast(false),4000)
+  }
+
+  const header=<><div className='eyebrow'>CHIẾU CHÈO SƯƠNG OAN <span>COMPANION CHO BỘ GAME VẬT LÝ</span></div><h1>Một câu chuyện<br/><em>nhiều góc nhìn.</em></h1><p className='lead'>Website không thay thế bàn chơi. Nó mở đúng thông tin cho từng thẻ và từng vai trò.</p></>
+
+  if(loading)return <main className='page game-page' aria-busy='true'>{header}<div className='hub-skeleton'><div className='bar short'/><div className='bar'/><div className='bar'/></div></main>
+
+  if(session.finished)return <main className='page game-page'>{header}<div className='hub-stack'>
+    <div className='hub-panel'><b>VÁN ĐÃ KẾT THÚC</b><p className='hub-note'>Cảm ơn nhóm đã chơi hết 5 chương.</p><button className='primary' onClick={()=>go('tongket')}>Xem tổng kết <ArrowRight/></button><button className='outline' onClick={()=>setConfirmingReset(true)}>Ván mới</button></div>
+  </div>
+    {confirmingReset&&<ConfirmDialog title='Bắt đầu ván mới?' body='Điểm Oan, điểm Hiểu Chèo, các lượt AI Vén Màn, Thẻ Can Thiệp đã dùng và kết quả Nhịp–Phách của ván này sẽ bị xóa khỏi máy này. Việc này không hoàn tác được.' confirmLabel='Xóa và bắt đầu lại' cancelLabel='Giữ ván này' onConfirm={doReset} onCancel={()=>setConfirmingReset(false)}/>}
+    {resetToast&&<div className='intervention-toast' role='status'>Đã xóa ván. Bắt đầu ván mới.</div>}
+  </main>
+
+  if(!session.startedAt)return <main className='page game-page'>{header}<div className='hub-stack'>
+    <div className='hub-panel'>
+      <b>BẮT ĐẦU VÁN MỚI</b>
+      <div className='hub-start'>
+        <label htmlFor='hub-start-chapter'>CHỌN CHƯƠNG BẮT ĐẦU</label>
+        <select id='hub-start-chapter' value={startChapter} onChange={e=>setStartChapter(Number(e.target.value))}>
+          {chapters.map((c,i)=><option key={c} value={i+1}>{`Chương ${i+1} · ${c}`}</option>)}
+        </select>
+      </div>
+      <button className='primary' onClick={begin}>Bắt đầu <ArrowRight/></button>
+    </div>
+    <button className='text-link' onClick={()=>go('guide')}>Đọc hướng dẫn <ArrowRight/></button>
+    <p className='hub-note'>Có thẻ trong tay? Quét QR trên thẻ hoặc nhập mã.</p>
+  </div></main>
+
+  const chapterIdx=session.chapter-1
+  const chapterHasStory=session.chapter===1
+  const chapterCards=storyCards.filter(c=>c.chapter===session.chapter)
+  const storyIdx=chapterCards.findIndex(c=>c.id===session.storyId)
+  const venLeft=Math.max(2-(session.venAsked[session.chapter]||0),0)
+  const continueToStory=chapterHasStory
+
+  return <main className='page game-page'>{header}
+    <div className='hub-stack'>
+      <div className='hub-panel'>
+        <div className='hub-run-status'>
+          <span>VÁN ĐANG CHƠI · Bắt đầu {new Date(session.startedAt).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})}</span>
+        </div>
+        <div className='chapter-chip'>
+          <label htmlFor='hub-chapter'>CHƯƠNG ĐANG CHƠI</label>
+          <select id='hub-chapter' value={session.chapter} onChange={e=>save({...session,chapter:Number(e.target.value)})}>
+            {chapters.map((c,i)=><option key={c} value={i+1}>{`Chương ${i+1} · ${c}`}</option>)}
+          </select>
+        </div>
+        {!chapterHasStory&&<p className='hub-note' role='status'>Chương này chưa có thẻ trên web. Hãy dùng bộ thẻ vật lý; AI Vén Màn vẫn dùng được cho chương này.</p>}
+        <div className='game-stats'><div><b>{session.oan}</b><span>ĐIỂM OAN</span></div><div><b>{session.hieu}</b><span>HIỂU CHÈO</span></div><div><b>{session.usedPerspectives.length}</b><span>LỜI CHỨNG</span></div></div>
+        <p className='hub-note'>Sổ điểm trên máy này · Oan càng thấp càng tốt</p>
+        <button className='primary' onClick={()=>go(continueToStory?'story':'ven')}>{continueToStory?'Tiếp tục · Thẻ Tích Truyện':'Mở AI Vén Màn'} <ArrowRight/></button>
+      </div>
+
+      <div className='hub-panel'>
+        <b>BỘ THẺ</b>
+        <div className='card-rows'>
+          {chapterHasStory&&<button className='card-row' onClick={()=>go('story')}><b>Thẻ Tích Truyện · Người Kể Tích</b><span>{storyIdx>=0?`Thẻ ${storyIdx+1}/${chapterCards.length}${chapterCards[storyIdx]?.type==='oan'?' · có Oan':''}`:`${chapterCards.length} thẻ trong chương`}</span></button>}
+          <button className='card-row' onClick={()=>go('perspective')}><b>Thẻ Góc Nhìn · Người Soi Chứng</b><span>Đã mở {session.usedPerspectives.length}/{perspectiveCards.length}</span></button>
+          <button className='card-row' onClick={()=>go('intervention')}><b>Thẻ Can Thiệp · Cả nhóm</b><span>Còn {interventionCards.length-session.usedInterventions.length}/{interventionCards.length} thẻ</span></button>
+          <button className='card-row' onClick={()=>go('rhythm')}><b>Thẻ Nhịp–Phách · Cả nhóm</b><span>{session.rhythmUsed?`Đã nghe ${session.rhythmAttempts} thẻ`:'Chưa thử'}</span></button>
+          <button className='card-row' onClick={()=>go('ven')}><b>Thẻ AI Vén Màn · Cả nhóm</b><span>Chương {session.chapter} · còn {venLeft}/2 câu</span></button>
+        </div>
+      </div>
+
+      <div className='hub-panel'>
+        <b>CÔNG CỤ</b>
+        <div className='card-rows'>
+          <button className='card-row' onClick={()=>go('journey')}><b>Hành trình (52 ô)</b></button>
+          <button className='card-row' onClick={()=>go('guide')}><b>Hướng dẫn chơi</b></button>
+        </div>
+      </div>
+
+      <div className='hub-panel'>
+        <b>QUẢN LÝ VÁN</b>
+        <div className='hub-manage'>
+          <button className='outline' onClick={()=>go('tongket')}>Kết thúc chương {session.chapter}</button>
+          <button className='outline' onClick={()=>setConfirmingReset(true)}>Ván mới</button>
+        </div>
+      </div>
+    </div>
+
+    {confirmingReset&&<ConfirmDialog title='Bắt đầu ván mới?' body='Điểm Oan, điểm Hiểu Chèo, các lượt AI Vén Màn, Thẻ Can Thiệp đã dùng và kết quả Nhịp–Phách của ván này sẽ bị xóa khỏi máy này. Việc này không hoàn tác được.' confirmLabel='Xóa và bắt đầu lại' cancelLabel='Giữ ván này' onConfirm={doReset} onCancel={()=>setConfirmingReset(false)}/>}
+    {resetToast&&<div className='intervention-toast' role='status'>Đã xóa ván. Bắt đầu ván mới.</div>}
+  </main>
+}
+function TongKet({session,save,go}:{session:GameSession;save:(s:GameSession)=>void;go:(p:Page)=>void}){
+  const chapter=session.chapter
+  const stats=chapterStats(session,chapter)
+  const objective=chapterData.find(c=>c.id===chapter)?.objective
+  const isLast=chapter>=5
+  const advance=()=>{
+    if(isLast){save({...session,finished:true})}
+    else{save({...session,chapter:chapter+1})}
+    go('game')
+  }
+  return <main className='page tongket-page'>
+    <div className='eyebrow'>TỔNG KẾT · CHƯƠNG {chapter}</div>
+    <h1>{chapters[chapter-1]}</h1>
+    {objective&&<div className='hub-panel'>
+      <b>CÂU HỎI CHO CẢ NHÓM</b>
+      <p>{objective}</p>
+      <p>Nhóm đã nhận ra điều này chưa?</p>
+    </div>}
+    <div className='hub-panel'>
+      <b>TRONG CHƯƠNG NÀY</b>
+      <div className='tongket-stats'>
+        <div><b>Điểm Oan</b><span>{stats.oanDelta>0?`+${stats.oanDelta}`:stats.oanDelta}</span></div>
+        <div><b>Điểm Hiểu Chèo</b><span>{stats.hieuDelta>0?`+${stats.hieuDelta}`:stats.hieuDelta}</span></div>
+        <div><b>Lời chứng đã mở</b><span>{stats.testimonies}</span></div>
+        <div><b>AI Vén Màn</b><span>{stats.venAsked}/2 câu</span></div>
+        <div><b>Thẻ Can Thiệp</b><span>Dùng {stats.interventionsUsed.length}</span></div>
+        <div><b>Nhịp–Phách</b><span>{stats.rhythmCount>0?`Đã nghe ${stats.rhythmCount} thẻ`:'Chưa thử'}</span></div>
+      </div>
+    </div>
+    {isLast&&<div className='hub-panel'>
+      <b>TOÀN VÁN</b>
+      <div className='tongket-stats'>
+        <div><b>Điểm Oan</b><span>{session.oan}</span></div>
+        <div><b>Điểm Hiểu Chèo</b><span>{session.hieu}</span></div>
+        <div><b>Lời chứng đã mở</b><span>{session.usedPerspectives.length}</span></div>
+      </div>
+    </div>}
+    <button className='primary' onClick={advance}>{isLast?'KẾT THÚC VÁN':`SANG CHƯƠNG ${chapter+1} →`}</button>
+    <button className='text-link' onClick={()=>go('game')}>Xem lại chương</button>
+  </main>
+}
 function UpdatedStory({card,go}:{card:StoryCard;go:(p:Page)=>void}){return <main className='page story-page'><div className='eyebrow'>THẺ TÍCH TRUYỆN · CHƯƠNG {card.chapter}<span>{card.type==='oan'?'● CÓ TÌNH HUỐNG OAN':'THẺ THƯỜNG'}</span></div><div className={card.type==='oan'?'story-card oan-mark':'story-card'}><span className='story-symbol'>{card.type==='oan'?'O':'T'}</span><h1>{card.title}</h1><p>{card.content}</p>{card.type==='oan'&&<div className='oan-notice'><b>OAN</b><span>Thẻ này mở hệ thống điều tra Góc Nhìn.</span></div>}</div><button className='primary' onClick={()=>card.type==='oan'?go('oan'):go('game')}>{card.type==='oan'?'Mở tình huống Oan':'Tiếp tục câu chuyện'} <ArrowRight/></button><button className='text-link' onClick={()=>go('ven')}>Thẻ AI Vén Màn <Sparkles/></button></main>}
-function UpdatedOan({go}:{go:(p:Page)=>void}){return <main className='page oan-page'><button className='back' onClick={()=>go('story')}>← Về Thẻ Tích Truyện</button><div className='oan-card'><div className='eyebrow'>TÌNH HUỐNG OAN · OAN-01</div><h1>Lời truyền<br/><em>ngoài sân.</em></h1><p className='story'>Một lời truyền miệng khiến nhân vật bị nhìn bằng ánh mắt khác. Hãy đọc tình huống trước khi chọn một Thẻ Góc Nhìn.</p><p className='question'>Bạn muốn nhìn sự việc từ góc nhìn của ai?</p><button className='primary' onClick={()=>go('perspective')}>Chọn Thẻ Góc Nhìn <Eye/></button><button className='outline' onClick={()=>go('intervention')}>Xem Thẻ Can Thiệp</button></div></main>}
-function UpdatedPerspective({go,code,setCode,inspect,perspective,testimony}:{go:(p:Page)=>void;code:string;setCode:(x:string)=>void;inspect:()=>void;perspective:Perspective|null;testimony:PerspectiveEvidence|null}){const [tried,setTried]=useState(false);return <main className='page perspective-page'><button className='back' onClick={()=>go('oan')}>← Về tình huống Oan</button><div className='eyebrow'>NGƯỜI SOI CHỨNG · THẺ GÓC NHÌN</div><h1>Mở một<br/><em>góc nhìn.</em></h1><div className='code-box'><label htmlFor='perspective-code'>NHẬP MÃ 4 CHỮ SỐ</label><input id='perspective-code' inputMode='numeric' maxLength={4} value={code} onChange={e=>{setTried(false);setCode(e.target.value.replace(/\D/g,''))}} placeholder='— — — —'/><button className='primary' onClick={()=>{setTried(true);inspect()}}>Xem góc nhìn <ArrowRight/></button>{code&&!(perspective&&testimony)&&(tried||(code.length===4&&!perspectiveCards.some(x=>x.code===code)))&&<p className='error'><X/> Mã không hợp lệ hoặc chưa thuộc tình huống này.</p>}</div>{perspective&&testimony&&<div className='testimony'><div className='eyebrow'>{perspective.name} · {perspective.role}</div><div className='traits'>{perspective.traits.map(x=><span key={x}>{x}</span>)}</div><h2>Lời chứng / Thông tin được biết</h2><p>{testimony.text}</p><small>Giới hạn hiểu biết: {perspective.blindSpot}</small><div className={testimony.effect<0?'result ok':'result neutral'}><b>{testimony.effect<0?'Thông tin này giúp làm rõ một phần sự việc.':testimony.effect===0?'Thông tin này chưa đủ để xác định sự việc.':'Thông tin này chưa giúp làm rõ tình huống.'}</b></div></div>}</main>}
-function UpdatedIntervention({session,save}:{session:GameSession;save:(s:GameSession)=>void}){return <main className='page intervention-page'><div className='eyebrow'>THẺ CAN THIỆP <span>NGUỒN LỰC CHIẾN THUẬT</span></div><h1>Nhóm vẫn có<br/><em>quyền lựa chọn.</em></h1><div className='intervention-grid'>{interventionCards.map(c=>{const used=session.usedInterventions.includes(c.id);return <article className={used?'used':''} key={c.id}><div className='card-top'><b>{c.name}</b><span>{used?'ĐÃ DÙNG':'1 LƯỢT'}</span></div><p>{c.description}</p><small><b>Điều kiện:</b> {c.condition}</small><small><b>Thời điểm:</b> {c.timing}</small><small><b>Hiệu ứng:</b> {c.effect}</small><button className='primary' disabled={used} onClick={()=>save({...session,usedInterventions:[...session.usedInterventions,c.id]})}>{used?'Đã tiêu thụ':'Dùng thẻ'}</button></article>})}</div></main>}
+function effectShortLabel(effect:number){return effect<0?'Giúp làm rõ một phần':effect===0?'Chưa đủ để xác định':'Chưa giúp làm rõ'}
+function UpdatedOan({go,session}:{go:(p:Page)=>void;session:GameSession}){
+  const opened=session.events.filter((e):e is Extract<GameEvent,{type:'perspective'}>=>e.type==='perspective'&&e.oanId===session.oanId)
+  const full=opened.length>=perspectiveCards.length
+  return <main className='page oan-page'>
+    <button className='back' onClick={()=>go('story')}>← Về Thẻ Tích Truyện</button>
+    <div className='oan-card'>
+      <div className='eyebrow'>TÌNH HUỐNG OAN · OAN-01</div>
+      <h1>Lời truyền<br/><em>ngoài sân.</em></h1>
+      <p className='story'>Một lời truyền miệng khiến nhân vật bị nhìn bằng ánh mắt khác. Hãy đọc tình huống trước khi chọn một Thẻ Góc Nhìn.</p>
+      <p className='question'>Bạn muốn nhìn sự việc từ góc nhìn của ai?</p>
+      {full?<p className='hub-note'>Đã mở hết Góc Nhìn hiện có.</p>:<button className='primary' onClick={()=>go('perspective')}>Chọn Thẻ Góc Nhìn <Eye/></button>}
+      <button className='outline' onClick={()=>go('intervention')}>Xem Thẻ Can Thiệp</button>
+    </div>
+    {opened.length>0&&<div className='hub-panel'>
+      <b>LỜI CHỨNG ĐÃ MỞ ({opened.length}/{perspectiveCards.length})</b>
+      <div className='card-rows'>
+        {opened.map(e=>{const card=perspectiveCards.find(c=>c.id===e.cardId);return card&&<a key={e.cardId} className='card-row' href={`/goc-nhin?ma=${card.code}`}><b>{card.name} · {card.role}</b><span>{effectShortLabel(e.effect)}</span></a>})}
+      </div>
+    </div>}
+  </main>
+}
+type PerspectiveError='none'|'too-short'|'not-found'|'wrong-oan'
+function UpdatedPerspective({go,session,save,loading}:{go:(p:Page)=>void;session:GameSession;save:(s:GameSession)=>void;loading:boolean}){
+  const searchParams=useSearchParams()
+  const [code,setCode]=useState('')
+  const [tried,setTried]=useState(false)
+  const [errorType,setErrorType]=useState<PerspectiveError>('none')
+  const [result,setResult]=useState<{card:Perspective;evidence:PerspectiveEvidence;reopened:boolean}|null>(null)
+  const inputRef=useRef<HTMLInputElement>(null)
+  const resultHeadingRef=useRef<HTMLHeadingElement>(null)
+
+  const lookup=(c:string)=>{
+    if(c.length<4){setErrorType('too-short');setResult(null);return}
+    const card=perspectiveCards.find(x=>x.code===c)
+    if(!card){setErrorType('not-found');setResult(null);return}
+    const ev=perspectiveEvidence.find(x=>x.cardId===card.id&&x.oanId===session.oanId)
+    if(!ev){setErrorType('wrong-oan');setResult(null);return}
+    setErrorType('none')
+    const key=card.id+session.oanId
+    const reopened=session.usedPerspectives.includes(key)
+    save(reopened?{...session,lastPerspectiveEffect:ev.effect}:logEvent({...session,usedPerspectives:[...session.usedPerspectives,key],oan:session.oan+ev.effect,lastPerspectiveEffect:ev.effect},{ch:session.chapter,type:'perspective',oanId:session.oanId,cardId:card.id,effect:ev.effect}))
+    setResult({card,evidence:ev,reopened})
+  }
+
+  useEffect(()=>{
+    if(result)resultHeadingRef.current?.focus()
+  },[result])
+
+  // Deep link (spec 3.5): a QR-scanned ?ma= is a clear intent to view, so auto-open on load.
+  // Waits for the session's own localStorage read (loading) to finish first -- firing earlier
+  // raced the SessionProvider mount and could save() over a blank in-memory session, silently
+  // wiping any previously-recorded oan/events on a real reload (caught via live testing, not code review).
+  useEffect(()=>{
+    if(loading)return
+    const ma=searchParams.get('ma')?.replace(/\D/g,'').slice(0,4)
+    if(ma){setCode(ma);if(ma.length===4)lookup(ma)}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[loading])
+
+  const reset=()=>{setCode('');setResult(null);setErrorType('none');setTried(false);inputRef.current?.focus();window.scrollTo({top:0,behavior:'smooth'})}
+
+  return <main className='page perspective-page'>
+    <button className='back' onClick={()=>go('oan')}>← Về tình huống Oan</button>
+    <div className='eyebrow'>NGƯỜI SOI CHỨNG · THẺ GÓC NHÌN</div>
+    <h1>Mở một<br/><em>góc nhìn.</em></h1>
+    <div className='code-box'>
+      <label htmlFor='perspective-code'>NHẬP MÃ 4 CHỮ SỐ</label>
+      <input ref={inputRef} id='perspective-code' inputMode='numeric' maxLength={4} value={code} onChange={e=>{setTried(false);setErrorType('none');setCode(e.target.value.replace(/\D/g,''))}} placeholder='— — — —'/>
+      <button className='primary' onClick={()=>{setTried(true);lookup(code)}}>Xem góc nhìn <ArrowRight/></button>
+      <small>Mã in trên Thẻ Góc Nhìn.</small>
+      {tried&&errorType==='too-short'&&<p className='error'><X/> Nhập đủ 4 chữ số.</p>}
+      {errorType==='not-found'&&<p className='error'><X/> Không tìm thấy thẻ có mã này. Kiểm tra lại mã trên thẻ.</p>}
+      {errorType==='wrong-oan'&&<p className='error'><X/> Thẻ này không thuộc tình huống hiện tại.</p>}
+    </div>
+    {result&&<div className='testimony' role='status'>
+      <div className='eyebrow'>{result.card.name} · {result.card.role}</div>
+      <div className='traits'>{result.card.traits.map(x=><span key={x}>{x}</span>)}</div>
+      <h2 ref={resultHeadingRef} tabIndex={-1}>Lời chứng / Thông tin được biết</h2>
+      <p>{result.evidence.text}</p>
+      <div className='blind-spot'><b>Giới hạn hiểu biết</b><span>{result.card.blindSpot}</span></div>
+      <div className={result.evidence.effect<0?'result ok':'result warn'}>
+        {result.evidence.effect<0?<Check/>:<TriangleAlert/>}
+        <b>{result.evidence.effect<0?'Thông tin này giúp làm rõ một phần sự việc.':result.evidence.effect===0?'Thông tin này chưa đủ để xác định sự việc.':'Thông tin này chưa giúp làm rõ tình huống.'}</b>
+        <span className='oan-chip'>Điểm Oan {result.evidence.effect>0?'+':''}{result.evidence.effect}</span>
+      </div>
+      {result.reopened&&<p className='reopen-note'>Đã ghi nhận trước đó. Không tính điểm lần nữa.</p>}
+      <button className='outline' onClick={reset}>Nhập mã khác</button>
+    </div>}
+  </main>
+}
+function ConfirmDialog({title,body,confirmLabel,cancelLabel,onConfirm,onCancel}:{title:string;body:React.ReactNode;confirmLabel:string;cancelLabel?:string;onConfirm:()=>void;onCancel:()=>void}){
+  const cancelRef=useRef<HTMLButtonElement>(null)
+  useEffect(()=>{
+    cancelRef.current?.focus()
+    const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape')onCancel()}
+    window.addEventListener('keydown',onKey)
+    return ()=>window.removeEventListener('keydown',onKey)
+  },[])
+  return <div className='dialog-backdrop' onClick={onCancel}>
+    <div className='dialog-box' role='dialog' aria-modal='true' aria-labelledby='dialog-title'>
+      <h2 id='dialog-title'>{title}</h2>
+      <p>{body}</p>
+      <div className='dialog-actions'>
+        <button ref={cancelRef} className='outline' onClick={onCancel}>{cancelLabel??'Để sau'}</button>
+        <button className='primary' onClick={onConfirm}>{confirmLabel}</button>
+      </div>
+    </div>
+  </div>
+}
+function interventionEffectMessage(id:string,go:(p:Page)=>void):React.ReactNode{
+  if(id==='i-01')return 'Đã ghi nhận. Hãy thực hiện trên bàn chơi: nhập thêm một mã Góc Nhìn.'
+  if(id==='i-02')return <>Đã thêm 1 lượt thử Nhịp–Phách. <button className='text-link' onClick={()=>go('rhythm')}>Đi tới Nhịp–Phách <ArrowRight/></button></>
+  return 'Đã ghi nhận.'
+}
+function UpdatedIntervention({session,save,go}:{session:GameSession;save:(s:GameSession)=>void;go:(p:Page)=>void}){
+  const searchParams=useSearchParams()
+  const highlightId=searchParams.get('the')
+  const rhythmCard=findRhythmCard('2714')
+  const eligibleFor=(id:string)=>id==='i-01'?session.lastPerspectiveEffect!==undefined&&session.lastPerspectiveEffect>=0:id==='i-02'?session.rhythmAttempts>=1&&session.rhythmBest<(rhythmCard?.passAt??80):true
+  const [confirming,setConfirming]=useState<Intervention|null>(null)
+  const [toast,setToast]=useState<React.ReactNode>(null)
+  const cardRefs=useRef<Record<string,HTMLElement|null>>({})
+
+  useEffect(()=>{
+    if(highlightId)cardRefs.current[highlightId]?.scrollIntoView({behavior:'smooth',block:'center'})
+  },[highlightId])
+
+  const confirmUse=()=>{
+    if(!confirming)return
+    const c=confirming
+    save(logEvent({...session,usedInterventions:[...session.usedInterventions,c.id],interventionLog:{...(session.interventionLog||{}),[c.id]:{at:Date.now(),chapter:session.chapter}}},{ch:session.chapter,type:'intervention',id:c.id}))
+    setConfirming(null)
+    setToast(interventionEffectMessage(c.id,go))
+    setTimeout(()=>setToast(null),6000)
+  }
+
+  return <main className='page intervention-page'>
+    <button className='back' onClick={()=>go('game')}>← Về game hub</button>
+    <div className='eyebrow'>THẺ CAN THIỆP <span>NGUỒN LỰC CHIẾN THUẬT</span></div>
+    <h1>Nhóm vẫn có<br/><em>quyền lựa chọn.</em></h1>
+    {toast&&<div className='intervention-toast' role='status'>{toast}</div>}
+    <div className='intervention-grid'>{interventionCards.map(c=>{
+      const used=session.usedInterventions.includes(c.id)
+      const eligible=eligibleFor(c.id)
+      const usedAt=session.interventionLog?.[c.id]
+      return <article ref={el=>{cardRefs.current[c.id]=el}} className={`${used?'used':''}${highlightId===c.id?' highlighted':''}`} key={c.id}>
+        <div className='card-top'>
+          <b>{c.name}</b>
+          {used?<span className='chip'>ĐÃ DÙNG</span>:eligible?<span className='chip chip-ok'>Đủ điều kiện</span>:<span className='chip chip-warn'>Chưa đủ điều kiện theo ghi nhận trên máy này</span>}
+        </div>
+        <p>{c.description}</p>
+        <div className='intervention-meta'>
+          <div><b>Điều kiện</b><span>{c.condition}</span></div>
+          <div><b>Thời điểm</b><span>{c.timing}</span></div>
+          <div><b>Hiệu ứng</b><span>{c.effect}</span></div>
+        </div>
+        {used
+          ?<small className='used-at'>Đã dùng lúc {usedAt?new Date(usedAt.at).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}):'--:--'} · Chương {usedAt?.chapter??session.chapter}</small>
+          :<button className='primary' onClick={()=>setConfirming(c)}>Dùng thẻ</button>}
+      </article>
+    })}</div>
+    {confirming&&<ConfirmDialog
+      title={`Dùng thẻ "${confirming.name}"?`}
+      body={<>Thẻ chỉ dùng được 1 lần trong ván.{!eligibleFor(confirming.id)&&<><br/><br/>Điều kiện chưa khớp với ghi nhận trên máy này. Vẫn dùng?</>}</>}
+      confirmLabel='Dùng thẻ'
+      cancelLabel='Để sau'
+      onConfirm={confirmUse}
+      onCancel={()=>setConfirming(null)}
+    />}
+  </main>
+}
 type VenEvidence={text:string;correct:boolean}
 type VenRound={answer:string;evidences:VenEvidence[]}
 const VEN_MAX_QUESTIONS=2
+const VEN_ROUND_KEY='ccts-ven-round'
+const VEN_SLOW_MS=8000
+const VEN_TIMEOUT_MS=45000
+type StoredVenRound={chapter:number;question:string;round:VenRound;picked:number[]}
 function UpdatedVen({session,save,go}:{session:GameSession;save:(s:GameSession)=>void;go:(p:Page)=>void}){
   const chapter=session.chapter
   const asked=session.venAsked[chapter]||0
   const left=VEN_MAX_QUESTIONS-asked
   const [question,setQuestion]=useState('')
   const [loading,setLoading]=useState(false)
+  const [slow,setSlow]=useState(false)
   const [notice,setNotice]=useState('')
+  const [noticeType,setNoticeType]=useState<'none'|'network'|'refused'>('none')
   const [round,setRound]=useState<VenRound|null>(null)
+  const [roundChapter,setRoundChapter]=useState<number|null>(null)
   const [picked,setPicked]=useState<number[]>([])
   const [revealed,setRevealed]=useState(false)
+  const [restoredNotice,setRestoredNotice]=useState(false)
   const midRound=(!!round&&!revealed)||loading
   const win=!!round&&picked.length===2&&picked.every(i=>round.evidences[i].correct)
+  const displayChapter=roundChapter??chapter
 
-  const reset=()=>{setQuestion('');setNotice('');setRound(null);setPicked([]);setRevealed(false)}
+  useEffect(()=>{
+    try{
+      const raw=sessionStorage.getItem(VEN_ROUND_KEY)
+      if(raw){
+        const stored:StoredVenRound=JSON.parse(raw)
+        setRound(stored.round)
+        setPicked(stored.picked||[])
+        setQuestion(stored.question)
+        setRoundChapter(stored.chapter)
+        setRestoredNotice(true)
+      }
+    }catch{}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[])
+
+  const persistRound=(next:StoredVenRound)=>{try{sessionStorage.setItem(VEN_ROUND_KEY,JSON.stringify(next))}catch{}}
+  const clearStoredRound=()=>{try{sessionStorage.removeItem(VEN_ROUND_KEY)}catch{}}
+
+  const reset=()=>{setQuestion('');setNotice('');setNoticeType('none');setRound(null);setRoundChapter(null);setPicked([]);setRevealed(false);setRestoredNotice(false);clearStoredRound()}
   const ask=async()=>{
     setLoading(true)
+    setSlow(false)
     setNotice('')
+    setNoticeType('none')
+    const slowTimer=setTimeout(()=>setSlow(true),VEN_SLOW_MS)
+    const controller=new AbortController()
+    const timeoutTimer=setTimeout(()=>controller.abort(),VEN_TIMEOUT_MS)
     try{
-      const response=await fetch('/api/ven',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,chapter})})
+      const response=await fetch('/api/ven',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,chapter}),signal:controller.signal})
       const data=await response.json()
-      if(data.verdict==='ok')setRound({answer:data.answer,evidences:data.evidences})
-      else setNotice(data.message||data.error||'Không thể kết nối AI lúc này.')
-    }catch{
-      setNotice('Không thể kết nối AI lúc này.')
+      if(data.verdict==='ok'){
+        // Deduct the moment the server says ok, not at reveal -- reveal-time deduction let a reload
+        // after seeing the 4 evidences dodge the per-chapter limit (spec 5.6).
+        save({...session,venAsked:{...session.venAsked,[chapter]:asked+1}})
+        const newRound:VenRound={answer:data.answer,evidences:data.evidences}
+        setRound(newRound)
+        setRoundChapter(chapter)
+        setPicked([])
+        setRevealed(false)
+        persistRound({chapter,question,round:newRound,picked:[]})
+      }else if(data.verdict==='off_topic'||data.verdict==='inappropriate'){
+        setNoticeType('refused')
+        setNotice(data.message||'Câu hỏi chưa phù hợp. Hãy đặt lại câu hỏi khác.')
+      }else{
+        setNoticeType('network')
+        setNotice(data.message||data.error||'Không thể kết nối AI lúc này.')
+      }
+    }catch(err){
+      setNoticeType('network')
+      setNotice((err as {name?:string})?.name==='AbortError'?'AI phản hồi quá chậm.':'Không thể kết nối AI lúc này.')
     }finally{
+      clearTimeout(slowTimer)
+      clearTimeout(timeoutTimer)
       setLoading(false)
+      setSlow(false)
     }
   }
-  const toggle=(i:number)=>setPicked(p=>p.includes(i)?p.filter(n=>n!==i):p.length<2?[...p,i]:p)
-  // ponytail: the question quota lives in localStorage like the rest of the session - clearing site data resets it.
+  const toggle=(i:number)=>setPicked(p=>{
+    const next=p.includes(i)?p.filter(n=>n!==i):p.length<2?[...p,i]:p
+    if(round)persistRound({chapter:displayChapter,question,round,picked:next})
+    return next
+  })
   const reveal=()=>{
-    save({...session,hieu:session.hieu+(win?1:0),venAsked:{...session.venAsked,[chapter]:asked+1}})
+    save(logEvent({...session,hieu:session.hieu+(win?1:0)},{ch:displayChapter,type:'ven',win}))
     setRevealed(true)
+    clearStoredRound()
   }
+  const clearRefusal=()=>{setNotice('');setNoticeType('none')}
 
   return <main className='page ven-page'>
-    <div className='eyebrow'>THẺ AI VÉN MÀN <span>CHƯƠNG {chapter} · CÒN {Math.max(left,0)}/{VEN_MAX_QUESTIONS} CÂU HỎI</span></div>
+    <button className='back' onClick={()=>go('game')}>← Về game hub</button>
+    <div className='eyebrow'>THẺ AI VÉN MÀN <span>CHƯƠNG {displayChapter} · CÒN {Math.max(left,0)}/{VEN_MAX_QUESTIONS} CÂU HỎI</span></div>
     <h1>Đừng nhận<br/><em>đáp án ngay.</em></h1>
-    <div className='chapter-picker'><span>CHƯƠNG ĐANG CHƠI</span>{chapters.map((c,i)=><button className={chapter===i+1?'selected':''} disabled={midRound} onClick={()=>{save({...session,chapter:i+1});reset()}} key={c}>Chương {i+1}<small>{c}</small></button>)}</div>
+    <div className='chapter-chip'>
+      <label htmlFor='ven-chapter'>CHƯƠNG ĐANG CHƠI</label>
+      <select id='ven-chapter' value={chapter} disabled={midRound} onChange={e=>{save({...session,chapter:Number(e.target.value)});reset()}}>
+        {chapters.map((c,i)=><option key={c} value={i+1}>{`Chương ${i+1} · ${c}`}</option>)}
+      </select>
+      {midRound&&<span className='chapter-locked-hint'>Kết thúc vòng để đổi chương</span>}
+    </div>
+    {restoredNotice&&round&&!revealed&&<p className='ven-notice ven-notice-info' role='status'>Đang tiếp tục vòng hỏi trước.</p>}
     {!round&&(left<=0?
-      <div className='locked-panel'><LockKeyhole/><h2>Đã dùng hết lượt hỏi</h2><p>Mỗi chương truyện chỉ được đặt tối đa {VEN_MAX_QUESTIONS} câu hỏi. Hãy chọn chương khác khi nhóm chơi sang chương mới.</p></div>
+      <div className='locked-panel'><LockKeyhole/><h2>Đã dùng hết lượt hỏi</h2><p>Đã dùng hết lượt hỏi của chương này. Hãy chọn chương khác khi nhóm chơi sang chương mới.</p></div>
     :
       <>
         <p className='lead'>Đặt một câu hỏi về cốt truyện, nhân vật hoặc chi tiết của chương này, hoặc về nghệ thuật chèo. AI sẽ không trả lời ngay mà đưa ra các bằng chứng để nhóm tự suy luận.</p>
-        <div className='ven-question'>
+        <div className='ven-question' aria-busy={loading}>
           <textarea value={question} maxLength={300} onChange={e=>setQuestion(e.target.value)} placeholder='Câu hỏi của nhóm...' disabled={loading}/>
           <span>{question.length}/300</span>
         </div>
-        {notice&&<p className='ven-notice' role='alert'>{notice}</p>}
-        <button className='primary' disabled={!question.trim()||loading} onClick={ask}>{loading?'AI đang suy nghĩ...':'Vén màn'} <Sparkles/></button>
+        {noticeType==='network'&&<p className='ven-notice ven-notice-danger' role='alert'>{notice} <button className='text-link' onClick={ask}>Thử lại</button></p>}
+        {noticeType==='refused'&&<p className='ven-notice ven-notice-warn'>{notice} <button className='text-link' onClick={clearRefusal}>Đặt lại câu hỏi</button></p>}
+        {loading&&slow&&<p className='ven-notice ven-notice-info' aria-live='polite'>AI cần thêm chút thời gian, xin đừng đóng trang.</p>}
+        <button className='primary' disabled={question.trim().length<2||loading} onClick={ask}>{loading?'AI đang suy nghĩ...':'Vén màn'} <Sparkles/></button>
       </>
     )}
     {round&&!revealed&&<>
@@ -96,13 +471,14 @@ function UpdatedVen({session,save,go}:{session:GameSession;save:(s:GameSession)=
         <p className='ven-hint'>AI chưa trả lời ngay. Hãy chọn đúng 2 bằng chứng giúp nhóm tìm ra câu trả lời ({picked.length}/2).</p>
         {round.evidences.map((e,i)=><button className={picked.includes(i)?'picked':''} aria-pressed={picked.includes(i)} key={i} onClick={()=>toggle(i)}><span>{picked.includes(i)?<Check/>:String.fromCharCode(65+i)}</span>{e.text}</button>)}
       </div>
-      <button className='primary' disabled={picked.length!==2} onClick={reveal}>Xem câu trả lời <ArrowRight/></button>
+      <div className='ven-sticky-bar'><button className='primary' disabled={picked.length!==2} onClick={reveal}>Xem câu trả lời <ArrowRight/></button></div>
     </>}
     {round&&revealed&&<div className='ven-result'>
       <strong>{win?'CHỌN ĐÚNG · +1 ĐIỂM HIỂU CHÈO':'CHƯA ĐÚNG · KHÔNG CÓ ĐIỂM HIỂU CHÈO'}</strong>
       <ul className='ven-review'>{round.evidences.map((e,i)=><li className={`${e.correct?'correct':'wrong'}${picked.includes(i)?' chosen':''}`} key={i}><span>{e.correct?'Bằng chứng đúng':'Gây nhiễu'}{picked.includes(i)?' · nhóm đã chọn':''}</span>{e.text}</li>)}</ul>
       <h2>Câu trả lời của AI Vén Màn</h2>
       <div className='ven-answer'><ReactMarkdown>{round.answer}</ReactMarkdown></div>
+      <small className='ven-disclaimer'>Nội dung do AI tạo, có thể chưa chính xác.</small>
       <div className='ven-actions'>
         {left>0&&<button className='primary' onClick={reset}>Đặt câu hỏi tiếp ({left} lượt còn lại)</button>}
         <button className='outline-light' onClick={()=>go('game')}>Về game hub</button>
@@ -111,7 +487,7 @@ function UpdatedVen({session,save,go}:{session:GameSession;save:(s:GameSession)=
   </main>
 }
 function LegacyApp(){const [page,setPage]=useState<Page>("home"),[query,setQuery]=useState(""),[filter,setFilter]=useState("Tất cả"),[selected,setSelected]=useState(arts[0]),[menu,setMenu]=useState(false),[code,setCode]=useState(""),[codeState,setCodeState]=useState("idle"),[qa,setQa]=useState(""),[answer,setAnswer]=useState(""),[question,setQuestion]=useState(""),[picked,setPicked]=useState<string[]>([]),[venDone,setVenDone]=useState(false),[step,setStep]=useState(0);const visible=useMemo(()=>arts.filter(a=>(filter==="Tất cả"||a.category===filter)&&(!query||`${a.name} ${a.region} ${a.tags.join(" ")}`.toLowerCase().includes(query.toLowerCase()))),[query,filter]);const go=(p:Page)=>{setPage(p);setMenu(false);window.scrollTo({top:0,behavior:"smooth"})};return <><header className="topbar"><button className="brand" onClick={()=>go("home")}><span>CHIẾU CHÈO</span><b>SƯƠNG OAN</b></button><nav><button onClick={()=>go("game")}>Khám phá di sản</button><button onClick={()=>go("game")}>Chiếu Chèo Sương Oan</button><button onClick={()=>go("qa")}>AI Hỏi Đáp</button><button onClick={()=>go("journey")}>Hành trình</button><button onClick={()=>go("about")}>Về dự án</button></nav><button className="menu-button" onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button></header>{menu&&<div className="mobile-menu"><button onClick={()=>go("game")}>Khám phá di sản</button><button onClick={()=>go("game")}>Chiếu Chèo Sương Oan</button><button onClick={()=>go("qa")}>AI Hỏi Đáp</button><button onClick={()=>go("journey")}>Hành trình</button><button onClick={()=>go("about")}>Về dự án</button></div>}{page==="home"&&<Home go={go}/>} {page==="archive"&&<Archive query={query} setQuery={setQuery} filter={filter} setFilter={setFilter} visible={visible} open={a=>{setSelected(a);go("article")}}/>} {page==="article"&&<Article art={selected} go={go}/>} {page==="qa"&&<QA/>} {page==="game"&&<Game go={go} step={step} setStep={setStep}/>} {page==="oan"&&<Oan code={code} setCode={setCode} state={codeState} validate={()=>setCodeState(code==="1842"?"ok":"bad")} go={go}/>} {page==="ven"&&<Ven question={question} setQuestion={setQuestion} picked={picked} setPicked={setPicked} done={venDone} submit={()=>setVenDone(true)} go={go}/>} {page==="journey"&&<Journey go={go}/>} {page==="rhythm"&&<Rhythm go={go}/>} {page==="about"&&<About/>}<footer><span>CHIẾU CHÈO SƯƠNG OAN</span><small>Một không gian học tập về nghệ thuật truyền thống Việt Nam</small></footer></>}
-function Home({go}:{go:(p:Page)=>void}){return <main className="home"><section className="stage-hero"><div className="stage-image"><img src="/images/cheo-stage-illustration.png" alt="Sân khấu Chèo với rèm đỏ, mái đình và nhạc cụ truyền thống"/></div><div className="stage-ornament top" aria-hidden="true">✦　❖　✦</div><div className="hero-copy stage-title"><div className="eyebrow">HÀNH TRÌNH THỊ KÍNH <span>OAN · NHẪN · GIÁC</span></div><h1>CHIẾU CHÈO<br/><em>SƯƠNG OAN</em></h1><p>Ai đang kể câu chuyện này? Vén màn, tìm bằng chứng và tự mình kết luận.</p><div className="actions"><button className="primary" onClick={()=>go("game")}>TRẢI NGHIỆM GAME <ArrowRight/></button><button className="stage-link" onClick={()=>go("qa")}>HỎI AI <Sparkles/></button></div></div><div className="stage-prop left" aria-hidden="true">☊</div><div className="stage-prop right" aria-hidden="true">♢</div><div className="stage-ornament bottom" aria-hidden="true">❧　❧　❧</div></section><div className="curtain-divider" aria-hidden="true"><span>✦</span><i/><span>❖</span><i/><span>✦</span></div><section className="door-section"><div className="section-heading"><span className="eyebrow">HAI CÁNH CỬA</span><h2>Chọn cách<br/><em>bước vào.</em></h2></div><div className="door-panels"><button className="door-panel question-door" onClick={()=>go('qa')}><span className="card-number">CỬA 01</span><span className="door-symbol">?</span><strong>AI HỎI ĐÁP</strong><small>Hỏi về nghệ thuật truyền thống Việt Nam</small><ArrowRight/></button><button className="door-panel game-door" onClick={()=>go('game')}><span className="card-number">CỬA 02</span><span className="door-symbol">◉</span><strong>CHIẾU CHÈO<br/>SƯƠNG OAN</strong><small>Đi vào hành trình Thị Kính</small><ArrowRight/></button></div></section><section className="card-archive"><div className="section-heading"><span className="eyebrow">BỘ THẺ ĐIỆN TỬ</span><h2>Những gì nằm<br/><em>trên bàn chơi.</em></h2></div><div className="physical-cards"><button className="physical-card" onClick={()=>go('story')}><span className="card-number">01 · CHIẾU CHÈO</span><b className="card-mark">✦</b><strong>TÍCH TRUYỆN</strong><small>Mở cảnh</small><span className="card-rule"/></button><button className="physical-card" onClick={()=>go('oan')}><span className="card-number">02 · CHIẾU CHÈO</span><b className="card-mark">O</b><strong>OAN</strong><small>Dừng lại để hỏi</small><span className="card-rule"/></button><button className="physical-card" onClick={()=>go('perspective')}><span className="card-number">03 · CHIẾU CHÈO</span><b className="card-mark">◌</b><strong>GÓC NHÌN</strong><small>Đọc lời chứng</small><span className="card-rule"/></button><button className="physical-card" onClick={()=>go('ven')}><span className="card-number">04 · CHIẾU CHÈO</span><b className="card-mark">✦</b><strong>AI VÉN MÀN</strong><small>Mở bằng chứng</small><span className="card-rule"/></button><button className="physical-card" onClick={()=>go('rhythm')}><span className="card-number">05 · CHIẾU CHÈO</span><b className="card-mark">♩</b><strong>NHỊP–PHÁCH</strong><small>Giữ nhịp sân khấu</small><span className="card-rule"/></button></div></section><section className="home-intro"><div><span className="section-number">01 /</span><h2>Một câu chuyện.<br/><em>Nhiều cách nhìn.</em></h2></div><p>Website không thay thế bàn chơi vật lý. Nó mở đúng thông tin ở đúng thời điểm để nhóm có thể nhìn sự việc chậm hơn, rộng hơn và có căn cứ hơn.</p></section><section className="feature-grid">{[["Hành trình","Năm chương như năm cảnh sân khấu","journey"],["25 Góc nhìn","Không phải để chọn ai đúng","perspective"],["Kiểm chứng","Quét thẻ Oan, đọc lời chứng","oan"],["AI Vén Màn","Đặt câu hỏi, tìm bằng chứng","ven"]].map(([title,copy,target],i)=><button className="feature-card" key={title} onClick={()=>go(target as Page)}><span>0{i+1}</span><strong>{title}</strong><small>{copy}</small><ArrowRight/></button>)}</section><section className="home-callout"><Sparkles/><div><span className="eyebrow">ĐIỂM BẮT ĐẦU</span><h2>Vén màn một<br/><em>câu chuyện.</em></h2></div><button className="primary" onClick={()=>go("ven")}>AI Vén Màn <ArrowRight/></button></section><section className="act-strip"><div><span className="section-number">02 /</span><h2>Thị Kính · Oan<br/><em>Nhẫn · Giác</em></h2></div><p>Bốn từ khóa đi cùng một hành trình: nhìn thấy, nhận ra điều chưa công bằng, giữ được lòng nhẫn nại và tự mình giác ngộ.</p></section><section className="chapter-overview"><div className="section-heading"><span className="eyebrow">NĂM CHƯƠNG · NĂM CẢNH</span><h2>Từ sân đình<br/><em>đến giác ngộ.</em></h2></div><div className="chapter-line">{chapters.map((name,i)=><button key={name} onClick={()=>go('game')}><span>{String(i+1).padStart(2,'0')}</span><b>{name}</b><small>{i===0?'Mở màn':i===4?'Khép lại':'Tiếp diễn'}</small></button>)}</div></section><section className="investigation-teaser"><div className="investigation-copy"><span className="eyebrow">NGƯỜI SOI CHỨNG</span><h2>Không chọn<br/><em>người đúng.</em></h2><p>Mở một Thẻ Góc Nhìn để biết nhân vật ấy thấy gì, không thấy gì, và lời chứng đó giúp nhóm đi xa đến đâu.</p><button className="text-link" onClick={()=>go('perspective')}>Xem 25 góc nhìn <ArrowRight/></button></div><div className="perspective-stack"><div className="perspective-card back"><span>THẺ GÓC NHÌN</span><b>?</b></div><div className="perspective-card front"><span>BÁC ĐỘ · 1842</span><h3>Người giữ trống làng</h3><p>Nhớ trình tự. Không nghe được mọi lời.</p></div></div></section></main>}
+function Home({go}:{go:(p:Page)=>void}){return <main className="home"><section className="stage-hero"><div className="stage-image"><img src="/images/cheo-stage-illustration.png" alt="Sân khấu Chèo với rèm đỏ, mái đình và nhạc cụ truyền thống"/></div><div className="stage-ornament top" aria-hidden="true">✦　❖　✦</div><div className="hero-copy stage-title"><div className="eyebrow">HÀNH TRÌNH THỊ KÍNH <span>OAN · NHẪN · GIÁC</span></div><h1>CHIẾU CHÈO<br/><em>SƯƠNG OAN</em></h1><p>Ai đang kể câu chuyện này? Vén màn, tìm bằng chứng và tự mình kết luận.</p><div className="actions"><button className="primary" onClick={()=>go("game")}>TRẢI NGHIỆM GAME <ArrowRight/></button><button className="stage-link" onClick={()=>go("qa")}>HỎI AI <Sparkles/></button></div></div><div className="stage-prop left" aria-hidden="true">☊</div><div className="stage-prop right" aria-hidden="true">♢</div><div className="stage-ornament bottom" aria-hidden="true">❧　❧　❧</div></section><div className="curtain-divider" aria-hidden="true"><span>✦</span><i/><span>❖</span><i/><span>✦</span></div><section className="door-section"><div className="section-heading"><span className="eyebrow">HAI CÁNH CỬA</span><h2>Chọn cách<br/><em>bước vào.</em></h2></div><div className="door-panels"><button className="door-panel question-door" onClick={()=>go('qa')}><span className="card-number">CỬA 01</span><span className="door-symbol">?</span><strong>AI HỎI ĐÁP</strong><small>Hỏi về nghệ thuật truyền thống Việt Nam</small><ArrowRight/></button><button className="door-panel game-door" onClick={()=>go('game')}><span className="card-number">CỬA 02</span><span className="door-symbol">◉</span><strong>CHIẾU CHÈO<br/>SƯƠNG OAN</strong><small>Đi vào hành trình Thị Kính</small><ArrowRight/></button></div></section><section className="card-archive"><div className="section-heading"><span className="eyebrow">BỘ THẺ ĐIỆN TỬ</span><h2>Những gì nằm<br/><em>trên bàn chơi.</em></h2></div><div className="physical-cards"><button className="physical-card" onClick={()=>go('story')}><span className="card-number">01 · CHIẾU CHÈO</span><b className="card-mark">✦</b><strong>TÍCH TRUYỆN</strong><small>Mở cảnh</small><span className="card-rule"/></button><button className="physical-card" onClick={()=>go('oan')}><span className="card-number">02 · CHIẾU CHÈO</span><b className="card-mark">O</b><strong>OAN</strong><small>Dừng lại để hỏi</small><span className="card-rule"/></button><button className="physical-card" onClick={()=>go('perspective')}><span className="card-number">03 · CHIẾU CHÈO</span><b className="card-mark">◌</b><strong>GÓC NHÌN</strong><small>Đọc lời chứng</small><span className="card-rule"/></button><button className="physical-card" onClick={()=>go('ven')}><span className="card-number">04 · CHIẾU CHÈO</span><b className="card-mark">✦</b><strong>AI VÉN MÀN</strong><small>Mở bằng chứng</small><span className="card-rule"/></button><button className="physical-card" onClick={()=>go('rhythm')}><span className="card-number">05 · CHIẾU CHÈO</span><b className="card-mark">♩</b><strong>NHỊP–PHÁCH</strong><small>Giữ nhịp sân khấu</small><span className="card-rule"/></button></div></section><section className="home-intro"><div><span className="section-number">01 /</span><h2>Một câu chuyện.<br/><em>Nhiều cách nhìn.</em></h2></div><p>Website không thay thế bàn chơi vật lý. Nó mở đúng thông tin ở đúng thời điểm để nhóm có thể nhìn sự việc chậm hơn, rộng hơn và có căn cứ hơn.</p></section><section className="feature-grid">{[["Hành trình","Năm chương như năm cảnh sân khấu","journey"],["Góc Nhìn","Mỗi nhân vật thấy một phần sự việc","perspective"],["Kiểm chứng","Đọc tình huống Oan, nhập mã, đọc lời chứng","oan"],["AI Vén Màn","Đặt câu hỏi, tìm bằng chứng","ven"]].map(([title,copy,target],i)=><button className="feature-card" key={title} onClick={()=>go(target as Page)}><span>0{i+1}</span><strong>{title}</strong><small>{copy}</small><ArrowRight/></button>)}</section><section className="home-callout"><Sparkles/><div><span className="eyebrow">ĐIỂM BẮT ĐẦU</span><h2>Vén màn một<br/><em>câu chuyện.</em></h2></div><button className="primary" onClick={()=>go("ven")}>AI Vén Màn <ArrowRight/></button></section><section className="act-strip"><div><span className="section-number">02 /</span><h2>Thị Kính · Oan<br/><em>Nhẫn · Giác</em></h2></div><p>Bốn từ khóa đi cùng một hành trình: nhìn thấy, nhận ra điều chưa công bằng, giữ được lòng nhẫn nại và tự mình giác ngộ.</p></section><section className="chapter-overview"><div className="section-heading"><span className="eyebrow">NĂM CHƯƠNG · NĂM CẢNH</span><h2>Từ sân đình<br/><em>đến giác ngộ.</em></h2></div><div className="chapter-line">{chapters.map((name,i)=><a key={name} href={`/hanh-trinh?chuong=${i+1}`}><span>{String(i+1).padStart(2,'0')}</span><b>{name}</b><small>{i===0?'Mở màn':i===4?'Khép lại':'Tiếp diễn'}</small></a>)}</div></section><section className="investigation-teaser"><div className="investigation-copy"><span className="eyebrow">NGƯỜI SOI CHỨNG</span><h2>Không chọn<br/><em>người đúng.</em></h2><p>Mở một Thẻ Góc Nhìn để biết nhân vật ấy thấy gì, không thấy gì, và lời chứng đó giúp nhóm đi xa đến đâu.</p><button className="text-link" onClick={()=>go('perspective')}>Thử một Thẻ Góc Nhìn <ArrowRight/></button></div><div className="perspective-stack"><div className="perspective-card back"><span>THẺ GÓC NHÌN</span><b>?</b></div><div className="perspective-card front"><span>BÁC ĐỘ · 1842</span><h3>Người giữ trống làng</h3><p>Nhớ trình tự. Không nghe được mọi lời.</p></div></div></section></main>}
 function Archive({query,setQuery,filter,setFilter,visible,open}:{query:string;setQuery:(s:string)=>void;filter:string;setFilter:(s:string)=>void;visible:Art[];open:(a:Art)=>void}){return <main className="page archive"><div className="eyebrow">KHÁM PHÁ DI SẢN <span>{arts.length} HỒ SƠ</span></div><h1>Mỗi vùng đất<br/><em>một cách kể.</em></h1><div className="search-row"><Search/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Tìm theo tên, vùng miền, khái niệm..."/></div><div className="filter-row">{filters.map(f=><button className={filter===f?"selected":""} onClick={()=>setFilter(f)} key={f}>{f}</button>)}</div><p className="result-count">{visible.length} hồ sơ phù hợp</p><div className="archive-grid">{visible.map((a,i)=><button className="archive-card" onClick={()=>open(a)} key={a.id}><div className="archive-image"><img src={a.image} alt=""/><span>{String(i+1).padStart(2,"0")}</span></div><small>{a.category} · {a.region}</small><h3>{a.name}</h3><p>{a.summary}</p><div className="tags">{a.tags.map(t=><span key={t}>{t}</span>)}</div></button>)}</div></main>}
 function Article({art,go}:{art:Art;go:(p:Page)=>void}){const [tab,setTab]=useState("Tổng quan"),tabs=["Tổng quan","Đặc trưng","Âm nhạc","Vai diễn","Giá trị văn hóa"];return <main className="page article"><button className="back" onClick={()=>go("game")}>← Quay lại kho lưu trữ</button><div className="article-head"><div><div className="eyebrow">HỒ SƠ DI SẢN · {art.region}</div><h1>{art.name}</h1><p>{art.summary}</p></div><div className="article-meta"><span>THỜI KỲ</span><b>{art.period}</b><span>THỂ LOẠI</span><b>{art.category}</b></div></div><div className="article-gallery"><figure><img src={art.image} alt={`Tư liệu minh họa ${art.name}`}/><figcaption>Hình ảnh minh họa giáo dục · Không phải tư liệu lưu trữ</figcaption></figure><figure><img src="/images/heritage-gallery-2.png" alt="Nhạc cụ truyền thống"/><figcaption>Không gian âm nhạc</figcaption></figure><figure><img src="/images/heritage-gallery-1.png" alt="Trang phục biểu diễn"/><figcaption>Ngôn ngữ sân khấu</figcaption></figure></div><div className="article-tabs">{tabs.map(t=><button className={tab===t?"active":""} onClick={()=>setTab(t)} key={t}>{t}</button>)}</div><section className="article-body"><div><h2>{tab}</h2><p>{tab==="Tổng quan"?art.summary:`${art.name} được nhận diện qua ${art.concepts.join(", ")}. Những yếu tố này tạo nên một ngôn ngữ nghệ thuật riêng, cần được đọc trong đúng không gian và cộng đồng thực hành.`}</p><div className="info-columns"><div><span>KHÁI NIỆM</span><ul>{art.concepts.map(x=><li key={x}>{x}</li>)}</ul></div><div><span>NHẠC CỤ / YẾU TỐ</span><ul>{art.instruments.map(x=><li key={x}>{x}</li>)}</ul></div><div><span>TÁC PHẨM / HÌNH THỨC</span><ul>{art.works.map(x=><li key={x}>{x}</li>)}</ul></div></div></div><aside className="source-note"><BookOpen/><div><span>NGUỒN THAM KHẢO</span><p>{art.source}</p><small>Nội dung mô phỏng cho prototype giáo dục; cần đối chiếu với tư liệu chuyên ngành khi xuất bản.</small></div></aside></section><div className="related-game"><span>LIÊN HỆ VỚI BỘ GAME</span><p>Tìm hiểu cách sân khấu, góc nhìn và lời kể giúp ta đọc một tình huống nhiều chiều.</p><button className="text-link" onClick={()=>go("game")}>Mở companion <ArrowRight/></button></div></main>}
 type ChatMessage={role:'user'|'assistant';content:string;sources?:{title:string;url:string}[]}
@@ -173,8 +549,141 @@ function QA(){
 function Game({go,step,setStep}:{go:(p:Page)=>void;step:number;setStep:(n:number)=>void}){return <main className="page game-page"><div className="eyebrow">CHIẾU CHÈO SƯƠNG OAN <span>COMPANION CHO BỘ GAME VẬT LÝ</span></div><h1>Một câu chuyện<br/><em>nhiều góc nhìn.</em></h1><p className="lead">Website không thay thế bàn chơi. Nó mở thêm bối cảnh, lưu lại hành trình và giúp cả nhóm cùng đọc một tình huống.</p><div className="chapter-picker"><span>CHƯƠNG ĐANG CHƠI</span>{chapters.map((c,i)=><button className={step===i?"selected":""} onClick={()=>setStep(i)} key={c}>Chương {i+1}<small>{c}</small></button>)}</div><div className="game-grid"><div className="game-panel"><span className="eyebrow">BẮT ĐẦU TỪ VẬT PHẨM TRÊN BÀN</span><h2>Quét Thẻ Oan</h2><p>Đưa camera vào mã QR trên lá bài. Màn hình tình huống sẽ mở đúng chương và đúng câu chuyện.</p><button className="primary" onClick={()=>go("oan")}>Mở mô phỏng QR <ArrowRight/></button></div><div className="game-panel dark"><span className="eyebrow">MỘT LẦN MỖI CHƯƠNG</span><h2>AI Vén Màn</h2><p>Đặt câu hỏi, chọn bằng chứng, rồi xem cách câu chuyện được giải thích.</p><button className="outline-light" onClick={()=>go("ven")}>Vén màn chương {step+1} <Sparkles/></button><button className="text-link" onClick={()=>go("rhythm")}>Thử Nhịp–Phách <ArrowRight/></button></div></div></main>}
 function Oan({code,setCode,state,validate,go}:{code:string;setCode:(s:string)=>void;state:string;validate:()=>void;go:(p:Page)=>void}){return <main className="page oan-page"><button className="back" onClick={()=>go("game")}>← Về game hub</button><div className="oan-card"><div className="eyebrow">THẺ OAN · CHƯƠNG I <span>OAN-01</span></div><h1>Tiếng gọi<br/><em>ngoài sân.</em></h1><p className="story">Trong một buổi diễn, một lời truyền miệng khiến nhân vật bị nhìn bằng ánh mắt khác. Hãy đọc tình huống trên Thẻ Oan trước khi tìm góc nhìn phù hợp.</p><div className="code-field"><label>MÃ GÓC NHÌN</label><input inputMode="numeric" maxLength={4} value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,""))} placeholder="— — — —"/><button className="primary" onClick={validate}>Kiểm tra mã <ArrowRight/></button></div>{state!=="idle"&&<div className={`result ${state}`}>{state==="ok"?<><Check/><strong>GIẢI OAN THÀNH CÔNG</strong><p>Góc nhìn phù hợp. Oan không bị trừ.</p></>:<><X/><strong>GÓC NHÌN CHƯA PHÙ HỢP</strong><p>Thử xem lại tình huống và góc nhìn của nhân vật.</p></>}</div>}<small className="privacy">Mã từ chương khác không thể giải tình huống này.</small></div></main>}
 function Ven({question,setQuestion,picked,setPicked,done,submit,go}:{question:string;setQuestion:(s:string)=>void;picked:string[];setPicked:(s:string[])=>void;done:boolean;submit:()=>void;go:(p:Page)=>void}){const evidence=["Lời kể của người trong cuộc","Âm thanh sau tấm màn","Lời đồn ở đầu làng","Động tác trên chiếu"];return <main className="page ven-page"><button className="back" onClick={()=>go("game")}>← Về game hub</button><div className="eyebrow">AI VÉN MÀN · CHƯƠNG I <span>{done?"ĐÃ DÙNG":"1 / 1 LƯỢT"}</span></div><h1>Đừng hỏi<br/><em>đáp án ngay.</em></h1>{!done?<><p className="lead">Đặt một câu hỏi. Sau đó chọn những mảnh bằng chứng giúp bạn tự nhìn ra câu trả lời.</p><div className="ven-question"><textarea value={question} onChange={e=>setQuestion(e.target.value)} placeholder="Tại sao nhân vật lại bị hiểu lầm?"/><span>{question.length}/140</span></div><div className="evidence-list">{evidence.map((e,i)=><button className={picked.includes(String(i))?"picked":""} onClick={()=>setPicked(picked.includes(String(i))?picked.filter(x=>x!==String(i)):[...picked,String(i)])} key={e}><span>{picked.includes(String(i))?<Check/>:String.fromCharCode(65+i)}</span><div><b>{e}</b><p>Chi tiết được truy xuất từ dữ liệu tình huống của chương hiện tại.</p></div></button>)}</div><button className="primary" disabled={!question||!picked.length} onClick={submit}>Đánh giá bằng chứng <ArrowRight/></button></>:<div className="ven-result"><div className="result ok"><Check/><strong>VÉN MÀN THÀNH CÔNG</strong><p>Bạn đã tìm đúng những bằng chứng quan trọng.</p></div><h2>Vì sao nhân vật bị hiểu lầm?</h2><p>Những chi tiết từ người trong cuộc và ngôn ngữ sân khấu giúp ta nhận ra điều nhân vật thực sự đang cố bảo vệ.</p><small>Nguồn: dữ liệu tình huống OAN-01 · Giải thích mô phỏng có kiểm soát</small></div>}</main>}
-function Rhythm({go}:{go:(p:Page)=>void}){const [code,setCode]=useState("");const [started,setStarted]=useState(false);const [taps,setTaps]=useState<number[]>([]);const [result,setResult]=useState<number|null>(null);const sequence=[0,420,840,1260,1680];const begin=()=>{if(code==="2714")setStarted(true)};const tap=()=>{if(!started||result!==null)return;const now=performance.now();setTaps(t=>[...t,now]);if(taps.length+1===sequence.length){const accuracy=Math.max(0,Math.round(100-Math.abs((now-taps[0])-1680)/25));setResult(Math.min(100,accuracy))}};return <main className="page rhythm-page"><button className="back" onClick={()=>go("game")}>← Về game hub</button><div className="eyebrow">THẺ NHỊP–PHÁCH <span>MÃ 2714 · CẤP ĐỘ 1</span></div><h1>Lắng nghe<br/><em>rồi đáp lại.</em></h1>{!started?<div className="rhythm-entry"><p>Nhập mã trên Thẻ Nhịp–Phách để mở mẫu nhịp đã được định sẵn.</p><label>NHẬP MÃ THẺ NHỊP–PHÁCH</label><input inputMode="numeric" maxLength={4} value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,""))} placeholder="— — — —"/><button className="primary" onClick={begin}>Mở thử thách <ArrowRight/></button>{code&&code!=="2714"&&<small>Mã chưa khớp dữ liệu mô phỏng.</small>}</div>:<div className="rhythm-challenge"><p>Quan sát nhịp, sau đó ấn nút theo đúng phách.</p><div className="beats">{sequence.map((_,i)=><span className={taps.length>i?"hit":""} key={i}>{i+1}</span>)}</div><button className="clapper" onClick={tap}>ẤN THEO PHÁCH</button>{result!==null&&<div className={result>=80?"result ok":"result fail"}><strong>{result}% — {result>=95?"Qua vòng xuất sắc":result>=80?"Qua vòng":"Chưa đạt ngưỡng 80%"}</strong><p>{result>=95?"+2 điểm Hiểu Chèo":result>=80?"+1 điểm Hiểu Chèo":"Bạn còn 1 lượt thử."}</p></div>}<small>Trong Chèo, nhịp và phách góp phần giữ thời gian cho câu hát và tạo sắc thái cho tiết mục.</small></div>}</main>}
-function Guide({go}:{go:(p:Page)=>void}){return <main className="page guide-page"><div className="eyebrow">HƯỚNG DẪN CHƠI <span>ĐẶT BÀN · QUÉT THẺ · SUY LUẬN</span></div><h1>Chơi cùng nhau,<br/><em>nhìn khác đi.</em></h1><p className="lead">Trang web là người bạn đồng hành. Bàn chơi vật lý vẫn là nơi câu chuyện diễn ra.</p><div className="guide-steps">{[['01','Đặt bàn chơi','Chia vai Người Kể Tích, Người Soi Chứng và đặt các bộ thẻ trong tầm tay.'],['02','Mở Thẻ Tích Truyện','Đọc theo thứ tự. Khi gặp dấu OAN, cả nhóm dừng lại và không vội phán xét.'],['03','Quét hoặc nhập mã','Mở đúng trang QR, nhập mã Góc Nhìn và đọc lời chứng của nhân vật.'],['04','Ghi nhớ lựa chọn','Dùng Thẻ Can Thiệp khi nhóm cần thêm một cơ hội. AI Vén Màn chỉ mở theo giới hạn của chương.']].map(s=><article key={s[0]}><span>{s[0]}</span><h2>{s[1]}</h2><p>{s[2]}</p></article>)}</div><button className="primary" onClick={()=>go('game')}>Mở game hub <ArrowRight/></button></main>}
-function About(){return <main className="page about-page"><div className="eyebrow">VỀ DỰ ÁN <span>CHIẾU CHÈO SƯƠNG OAN</span></div><h1>Di sản để<br/><em>tiếp tục sống.</em></h1><p className="lead">Một nền tảng giáo dục dành cho học sinh trung học, kết nối kho tri thức nghệ thuật truyền thống với trải nghiệm của bộ board game vật lý.</p><div className="about-grid"><section><h2>Kho tri thức</h2><p>Nội dung được tổ chức theo loại hình, khái niệm, nhạc cụ, không gian và nguồn tư liệu. Các câu trả lời AI chỉ là lớp truy cập học tập, không thay thế tư liệu chuyên ngành.</p></section><section><h2>Nội dung trò chơi</h2><p>Chiếu Chèo Sương Oan dùng câu chuyện, Góc Nhìn, Oan và Nhịp–Phách để khuyến khích học sinh nhìn một tình huống từ nhiều phía.</p></section><section><h2>Phương pháp</h2><p>Prototype sử dụng dữ liệu mô phỏng có kiểm soát. Những phần cần xác minh được đánh dấu rõ để có thể thay bằng nguồn bảo tàng, trường đại học và cơ quan văn hóa trước khi xuất bản.</p></section></div></main>}
-function Journey({go}:{go:(p:Page)=>void}){const [active,setActive]=useState(0);const spaces=Array.from({length:52},(_,i)=>({n:i+1,chapter:Math.min(5,Math.floor(i/11)+1),type:i===0?'start':i===51?'finish':i%11===10?'chapter':i%7===0?'evidence':i%5===0?'choice':'story'}));return <main className="page journey journey-board"><div className="eyebrow">HÀNH TRÌNH CỦA TÔI <span>52 Ô · 5 CHƯƠNG · PHIÊN ĐANG LƯU</span></div><div className="journey-head"><div><h1>Đường đi không<br/><em>thẳng.</em></h1><p className="lead">Mỗi ô là một lần dừng lại. Mỗi chương mở ra một cách nhìn khác về cùng một câu chuyện.</p></div><div className="journey-progress"><strong>{String(active+1).padStart(2,'0')} / 52</strong><span>ĐANG ĐỨNG Ở Ô {active+1}</span></div></div><div className="board-wrap"><div className="board-grid">{spaces.map(space=><button key={space.n} className={`board-space ${space.type} ${space.n-1===active?'selected':''}`} onClick={()=>setActive(space.n-1)} aria-label={`Ô ${space.n}, chương ${space.chapter}`}><span>{String(space.n).padStart(2,'0')}</span><b>{space.type==='start'?'MỞ':space.type==='finish'?'GIÁC':space.type==='chapter'?`C${space.chapter}`:space.type==='evidence'?'?':space.type==='choice'?'×':'·'}</b></button>)}</div><aside className="space-detail"><span className="eyebrow">Ô {String(active+1).padStart(2,'0')} · CHƯƠNG {spaces[active].chapter}</span><h2>{spaces[active].type==='evidence'?'Một bằng chứng chưa đủ.':spaces[active].type==='choice'?'Bạn sẽ chọn nhìn từ đâu?':spaces[active].type==='chapter'?chapters[spaces[active].chapter-1]:spaces[active].type==='finish'?'Giác':'Tiếng kể tiếp tục.'}</h2><p>{spaces[active].type==='evidence'?'Bằng chứng không tự nói ra đáp án. Nhóm cần đặt nó cạnh một lời chứng khác.':'Chạm vào các ô để xem nhịp của hành trình và mở đúng trải nghiệm khi bàn chơi yêu cầu.'}</p><button className="primary" onClick={()=>go(spaces[active].type==='evidence'?'perspective':'game')}>{spaces[active].type==='evidence'?'Mở Góc Nhìn':'Tiếp tục'} <ArrowRight/></button></aside></div></main>}
+// Nhịp–Phách, per the project owner's brief (2026-09-23): the website only bridges a physical
+// card to its audio -- no tap capture, no timing score, no AI/LLM judging the clap. The group
+// claps along to the played audio in real life; the site can't observe or grade that at all.
+function Rhythm({go,session,save}:{go:(p:Page)=>void;session:GameSession;save:(s:GameSession)=>void}){
+  const searchParams=useSearchParams()
+  const [code,setCode]=useState("")
+  const [activeCode,setActiveCode]=useState<string|null>(null)
+  const [phase,setPhase]=useState<'entry'|'listen'|'done'>('entry')
+  const [canFinish,setCanFinish]=useState(false)
+  const card=activeCode?findRhythmCard(activeCode):undefined
+
+  const begin=(c:string)=>{if(findRhythmCard(c)){setActiveCode(c);setPhase('listen');setCanFinish(false)}}
+
+  // Deep link (spec 3.5): /nhip-phach?ma=2714 from a scanned QR opens the audio directly.
+  useEffect(()=>{
+    const ma=searchParams.get('ma')?.replace(/\D/g,'').slice(0,4)
+    if(ma){setCode(ma);begin(ma)}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[])
+
+  const finish=()=>{
+    if(!card)return
+    save(logEvent({...session,rhythmAttempts:session.rhythmAttempts+1,rhythmUsed:true,hieu:session.hieu+1},{ch:session.chapter,type:'rhythm',code:card.code}))
+    setPhase('done')
+  }
+
+  return <main className='page rhythm-page'>
+    <button className='back' onClick={()=>go('game')}>← Về game hub</button>
+    <div className='eyebrow'>THẺ NHỊP–PHÁCH <span>{card?`MÃ ${card.code} · CẤP ĐỘ ${card.level}`:'QUÉT HOẶC NHẬP MÃ'}</span></div>
+    <h1>Lắng nghe<br/><em>rồi vỗ tay theo.</em></h1>
+
+    {phase==='entry'&&<div className='rhythm-entry'>
+      <p>Quét mã QR trên Thẻ Nhịp–Phách, hoặc nhập mã 4 chữ số để mở âm thanh.</p>
+      <label htmlFor='rhythm-code'>NHẬP MÃ THẺ NHỊP–PHÁCH</label>
+      <input id='rhythm-code' inputMode='numeric' maxLength={4} value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,''))} placeholder='— — — —'/>
+      <button className='primary' onClick={()=>begin(code)}>Mở âm thanh <ArrowRight/></button>
+      {code.length===4&&!findRhythmCard(code)&&<small>Mã chưa khớp thẻ nào.</small>}
+    </div>}
+
+    {phase==='listen'&&card&&<div className='rhythm-challenge'>
+      <p>Bật loa cho cả nhóm nghe, rồi vỗ tay theo đúng nhịp của đoạn âm thanh.</p>
+      <audio className='rhythm-audio' controls src={card.audioFile} onEnded={()=>setCanFinish(true)}/>
+      <small>[DEMO MODE] Âm thanh tạm dùng chung cho mọi mã thẻ, chờ nội dung thật từ chủ dự án.</small>
+      <button className='primary' onClick={finish} disabled={!canFinish}>Đã nghe xong, quay lại bàn chơi <ArrowRight/></button>
+      {!canFinish&&<small>Nghe hết đoạn âm thanh để tiếp tục.</small>}
+    </div>}
+
+    {phase==='done'&&<div className='rhythm-result' role='status' aria-live='polite'>
+      <p className='rhythm-verdict'>Đã hoàn thành Thẻ Nhịp–Phách. +1 điểm Hiểu Chèo.</p>
+      <button className='primary' onClick={()=>go('game')}>Về game hub <ArrowRight/></button>
+    </div>}
+  </main>
+}
+function Guide({go}:{go:(p:Page)=>void}){return <main className="page guide-page"><div className="eyebrow">HƯỚNG DẪN CHƠI <span>ĐẶT BÀN · QUÉT THẺ · SUY LUẬN</span></div><h1>Chơi cùng nhau,<br/><em>nhìn khác đi.</em></h1><p className="lead">Trang web là người bạn đồng hành. Bàn chơi vật lý vẫn là nơi câu chuyện diễn ra.</p><div className="guide-steps">{[['01','Đặt bàn chơi','Chia vai Người Kể Tích, Người Soi Chứng và đặt các bộ thẻ trong tầm tay.'],['02','Mở Thẻ Tích Truyện','Đọc theo thứ tự. Khi gặp dấu OAN, cả nhóm dừng lại và không vội phán xét.'],['03','Nhập mã trên thẻ','Nhập mã 4 chữ số của Thẻ Góc Nhìn để đọc lời chứng của nhân vật.'],['04','Ghi nhớ lựa chọn','Dùng Thẻ Can Thiệp khi nhóm cần thêm một cơ hội. AI Vén Màn chỉ mở theo giới hạn của chương.']].map(s=><article key={s[0]}><span>{s[0]}</span><h2>{s[1]}</h2><p>{s[2]}</p></article>)}</div><button className="primary" onClick={()=>go('game')}>Mở game hub <ArrowRight/></button></main>}
+function About(){return <main className="page about-page"><div className="eyebrow">VỀ DỰ ÁN <span>CHIẾU CHÈO SƯƠNG OAN</span></div><h1>Di sản để<br/><em>tiếp tục sống.</em></h1><p className="lead">Một nền tảng giáo dục dành cho học sinh trung học, kết nối trợ lý hỏi đáp về nghệ thuật truyền thống với trải nghiệm của bộ board game vật lý.</p><div className="about-grid"><section><h2>AI Hỏi Đáp Di Sản</h2><p>Trợ lý học tập trả lời về nghệ thuật truyền thống Việt Nam, ưu tiên nguồn đã kiểm chứng. Câu trả lời của AI chỉ là điểm bắt đầu, không thay thế tư liệu chuyên ngành.</p></section><section><h2>Nội dung trò chơi</h2><p>Chiếu Chèo Sương Oan dùng câu chuyện, Góc Nhìn, Oan và Nhịp–Phách để khuyến khích học sinh nhìn một tình huống từ nhiều phía.</p></section><section><h2>Phương pháp</h2><p>Prototype sử dụng dữ liệu mô phỏng có kiểm soát. Những phần cần xác minh được đánh dấu rõ để có thể thay bằng nguồn bảo tàng, trường đại học và cơ quan văn hóa trước khi xuất bản.</p></section></div><section id="nguon-ghi-nhan" className="about-credits"><h2>Nguồn & ghi nhận</h2><ul><li>Nguồn tư liệu của AI: [Nội dung cần bổ sung]</li><li>Quyền hình ảnh: [Nội dung cần bổ sung]</li><li>Đơn vị thực hiện: [Nội dung cần bổ sung]</li><li>Liên hệ: [Nội dung cần bổ sung]</li></ul></section></main>}
+const JOURNEY_CHAPTER_RANGES:[number,number][]=[[1,11],[12,22],[23,33],[34,44],[45,52]]
+const journeySpaces=Array.from({length:52},(_,i)=>({n:i+1,chapter:Math.min(5,Math.floor(i/11)+1),type:i===0?'start':i===51?'finish':i%11===10?'chapter':i%7===0?'evidence':i%5===0?'choice':'story'} as const))
+const journeyTypeLabel:Record<string,string>={start:'ô mở đầu',finish:'ô giác',chapter:'chốt chương',evidence:'bằng chứng',choice:'lựa chọn',story:'cảnh kể'}
+function journeySpaceDetail(space:typeof journeySpaces[number]){
+  const title=space.type==='evidence'?'Một bằng chứng chưa đủ.':space.type==='choice'?'Bạn sẽ chọn nhìn từ đâu?':space.type==='chapter'?chapters[space.chapter-1]:space.type==='finish'?'Giác':'Tiếng kể tiếp tục.'
+  const body=space.type==='evidence'?'Bằng chứng không tự nói ra đáp án. Nhóm cần đặt nó cạnh một lời chứng khác.':'Chạm vào các ô để xem nhịp của hành trình và mở đúng trải nghiệm khi bàn chơi yêu cầu.'
+  // Only cells with a real destination get a button (spec 5.9, AC-HT-6): the old "Tiếp tục" link
+  // back to the hub on every other cell type was a dead end, not a feature.
+  const cta:{label:string;page:Page}|null=space.type==='evidence'?{label:'Mở Góc Nhìn',page:'perspective'}:space.type==='choice'?{label:'Xem Thẻ Can Thiệp',page:'intervention'}:space.type==='chapter'?{label:`AI Vén Màn chương ${space.chapter}`,page:'ven'}:null
+  return {title,body,cta}
+}
+function JourneySpaceDetail({space,go}:{space:typeof journeySpaces[number];go:(p:Page)=>void}){
+  const {title,body,cta}=journeySpaceDetail(space)
+  return <aside className="space-detail"><span className="eyebrow">Ô {String(space.n).padStart(2,'0')} · CHƯƠNG {space.chapter}</span><h2>{title}</h2><p>{body}</p>{cta&&<button className="primary" onClick={()=>go(cta.page)}>{cta.label} <ArrowRight/></button>}</aside>
+}
+function Journey({go}:{go:(p:Page)=>void}){
+  const searchParams=useSearchParams()
+  const [active,setActive]=useState(0)
+  const [activeTab,setActiveTab]=useState(1)
+  const tabRefs=useRef<Record<number,HTMLButtonElement|null>>({})
+  const spaces=journeySpaces
+
+  useEffect(()=>{
+    const chuongRaw=searchParams.get('chuong')
+    const chuongParam=Number(chuongRaw)
+    const oParam=Number(searchParams.get('o'))
+    const tab=chuongParam>=1&&chuongParam<=5?chuongParam:1
+    let cellN:number
+    if(oParam>=1&&oParam<=52){
+      cellN=oParam
+      setActiveTab(chuongRaw?tab:spaces[cellN-1].chapter)
+    }else{
+      // spec 5.9: an out-of-range ?o is ignored; falls back to the active tab's first cell
+      // (rather than a literal global ô 1) so the selected cell always matches what's on screen.
+      cellN=JOURNEY_CHAPTER_RANGES[tab-1][0]
+      setActiveTab(tab)
+    }
+    setActive(cellN-1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[])
+
+  const selectTab=(n:number)=>{setActiveTab(n);setActive(JOURNEY_CHAPTER_RANGES[n-1][0]-1)}
+  const onTabKey=(e:React.KeyboardEvent)=>{
+    if(e.key==='ArrowRight'||e.key==='ArrowLeft'){
+      e.preventDefault()
+      const next=e.key==='ArrowRight'?(activeTab<5?activeTab+1:1):(activeTab>1?activeTab-1:5)
+      selectTab(next)
+      tabRefs.current[next]?.focus()
+    }
+  }
+
+  const [rangeStart,rangeEnd]=JOURNEY_CHAPTER_RANGES[activeTab-1]
+  const chapterSpaces=spaces.slice(rangeStart-1,rangeEnd)
+
+  return <main className="page journey journey-board">
+    <div className="eyebrow">BẢN ĐỒ HÀNH TRÌNH <span>52 Ô · 5 CHƯƠNG</span></div>
+    <h1>Đường đi không<br/><em>thẳng.</em></h1>
+    <p className="lead">Mỗi ô là một lần dừng lại. Mỗi chương mở ra một cách nhìn khác về cùng một câu chuyện.</p>
+
+    <div className="journey-tabs">
+      <div className="journey-tablist" role="tablist" aria-label="Chọn chương" onKeyDown={onTabKey}>
+        {[1,2,3,4,5].map(n=><button key={n} ref={el=>{tabRefs.current[n]=el}} role="tab" aria-selected={activeTab===n} tabIndex={activeTab===n?0:-1} className={`journey-tab${activeTab===n?' selected':''}`} onClick={()=>selectTab(n)}>C{n}</button>)}
+      </div>
+      <h2>Chương {activeTab} · {chapters[activeTab-1]}</h2>
+      <p className="journey-tab-range">Ô {rangeStart}–{rangeEnd}</p>
+      <div className="journey-mini-grid">
+        {chapterSpaces.map(space=><button key={space.n} className={`board-space ${space.type}${space.n-1===active?' selected':''}`} onClick={()=>setActive(space.n-1)} aria-label={`Ô ${space.n}, chương ${space.chapter}, ${journeyTypeLabel[space.type]}`}><span>{String(space.n).padStart(2,'0')}</span><b>{space.type==='start'?'MỞ':space.type==='finish'?'GIÁC':space.type==='chapter'?`C${space.chapter}`:space.type==='evidence'?'?':space.type==='choice'?'×':'·'}</b></button>)}
+      </div>
+      <p className="journey-legend">Chú giải: C1 chốt chương · ? bằng chứng · × lựa chọn · · cảnh kể</p>
+      <JourneySpaceDetail space={spaces[active]} go={go}/>
+    </div>
+
+    <div className="journey-desktop">
+      <div className="journey-head"><div className="journey-progress"><strong>{String(active+1).padStart(2,'0')} / 52</strong><span>Ô ĐANG XEM: {active+1}</span></div></div>
+      <div className="board-wrap">
+        <div className="board-grid">{spaces.map(space=><button key={space.n} className={`board-space ${space.type} ${space.n-1===active?'selected':''}`} onClick={()=>setActive(space.n-1)} aria-label={`Ô ${space.n}, chương ${space.chapter}, ${journeyTypeLabel[space.type]}`}><span>{String(space.n).padStart(2,'0')}</span><b>{space.type==='start'?'MỞ':space.type==='finish'?'GIÁC':space.type==='chapter'?`C${space.chapter}`:space.type==='evidence'?'?':space.type==='choice'?'×':'·'}</b></button>)}</div>
+        <JourneySpaceDetail space={spaces[active]} go={go}/>
+      </div>
+      <p className="journey-legend">Chú giải: C1 chốt chương · ? bằng chứng · × lựa chọn · · cảnh kể</p>
+    </div>
+  </main>
+}
 export default AppShell

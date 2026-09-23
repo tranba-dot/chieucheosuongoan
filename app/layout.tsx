@@ -1,6 +1,7 @@
 import { Analytics } from '@vercel/analytics/next'
 import { Be_Vietnam_Pro } from 'next/font/google'
 import type { Metadata, Viewport } from 'next'
+import { SessionProvider } from './_session'
 import './globals.css'
 
 const beVietnamPro = Be_Vietnam_Pro({
@@ -24,5 +25,5 @@ export const viewport: Viewport = {
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="vi" className={`${beVietnamPro.variable} bg-background`}><body className="antialiased">{children}{process.env.NODE_ENV === 'production' && <Analytics />}</body></html>
+  return <html lang="vi" className={`${beVietnamPro.variable} bg-background`} data-scroll-behavior="smooth"><body className="antialiased"><SessionProvider>{children}</SessionProvider>{process.env.NODE_ENV === 'production' && <Analytics />}</body></html>
 }
